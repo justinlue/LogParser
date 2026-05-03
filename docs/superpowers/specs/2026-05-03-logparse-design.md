@@ -5,7 +5,15 @@
 
 ## Goal
 
-Build a Node.js web tool that lets a user upload a raw embedded-device log (`raw.txt`) and view a reconstructed, human-readable log table. Each raw line is matched against a server-side dictionary (`event_trace.csv`) by event ID; descriptions are filled with the raw line's parameters. Designed to be deployed on a remote Node host.
+Build a Node.js web tool that lets a user upload a raw embedded-device log and view a reconstructed, human-readable log table. The uploaded filename encodes the device serial number (SN), which is shown alongside the parsed log. Each raw line is matched against a server-side dictionary (`event_trace.csv`) by event ID; descriptions are filled with the raw line's parameters. Designed to be deployed on a remote Node host.
+
+## Filename / SN Convention
+
+Uploaded files MUST be named `raw_<SN>.txt` or `raw_<SN>.log`, where `<SN>` is exactly 15 alphanumeric characters (`[A-Za-z0-9]{15}`).
+
+Example: `raw_NSB023567819006.txt` → SN `NSB023567819006`.
+
+A filename that does not match the strict pattern is rejected with an HTTP 400 — this catches misnamed uploads early rather than silently parsing without an SN.
 
 ## Inputs
 
@@ -20,7 +28,7 @@ Columns: `event_id, param_cnt, param_type, description`
 | `array` | Description has no placeholder; append parameters as 2-digit uppercase hex bytes joined by commas (e.g. `F7,80,25,14,B0,1D`) |
 | `none` | No parameters; emit description verbatim |
 
-### `raw.txt` (uploaded by user)
+### `raw_<SN>.txt` (uploaded by user; filename encodes SN — see "Filename / SN Convention" below)
 
 Comma-separated, one log line per row:
 - Field 1: Unix epoch seconds (UTC)
@@ -46,22 +54,32 @@ LogParse/
   server.js                 # Express bootstrap
   src/
     dictionary.js           # Load + parse event_trace.csv at startup
-    parser.js               # Parse raw.txt content → structured records
+    parser.js               # Parse raw log content → structured records
     formatter.js            # Apply description template, format params
+    sn.js                   # Extract SN from upload filename
     routes.js               # POST /api/parse handler
   public/
-    index.html              # Upload UI + table + search
+    index.html              # Upload UI + SN banner + table + search
     app.js                  # Client logic
     styles.css
   event_trace.csv           # Server-side dictionary
-  raw.txt                   # Sample
+  raw_NSB023567819006.txt   # Sample
   tests/
     dictionary.test.js
     parser.test.js
     formatter.test.js
+    sn.test.js
 ```
 
-## Parsing Pipeline (3 pure modules)
+## Parsing Pipeline (4 pure modules)
+
+### `sn.js`
+
+```
+extractSn(filename) → string  // throws if pattern doesn't match
+```
+
+Validates `filename` against `/^raw_([A-Za-z0-9]{15})\.(txt|log)$/`. Returns the 15-char SN on match. Throws an `Error` with a descriptive message on mismatch — caller (routes.js) translates this into HTTP 400.
 
 ### `dictionary.js`
 
@@ -112,42 +130,49 @@ The full pipeline composes as: `text → parseRawText → records → records.ma
 ```
 POST /api/parse
   Content-Type: multipart/form-data
-  Field: "logfile"
+  Field: "logfile"   (filename must match raw_<15-char SN>.{txt|log})
 
   → 200 OK
-    [
-      { "time": "2026-05-03 12:51:02", "eventId": 2004, "message": "Ble send pkt len: 128 to mcu" },
-      ...
-    ]
+    {
+      "sn": "NSB023567819006",
+      "records": [
+        { "time": "2026-05-03 12:51:02", "eventId": 2004, "message": "Ble send pkt len: 128 to mcu" },
+        ...
+      ]
+    }
 ```
 
 Implementation:
 1. `multer` with `memoryStorage()`, 5 MB file-size limit, single field `logfile`.
-2. Read `req.file.buffer` as UTF-8 text.
-3. Run pipeline: `parseRawText(text).map(r => formatRecord(r, dictionary))`.
-4. `res.json(...)`.
+2. Call `extractSn(req.file.originalname)` — on throw, return 400.
+3. Read `req.file.buffer` as UTF-8 text.
+4. Run pipeline: `parseRawText(text).map(r => formatRecord(r, dictionary))`.
+5. `res.json({ sn, records })`.
 
 **HTTP-level errors:**
 - No file → `400 { error: "no file" }`
+- Filename does not match `raw_<SN>.{txt|log}` → `400 { error: "filename must match raw_<15-char SN>.{txt|log}" }`
 - File too large → multer's default 413 response
 - Unhandled exception → `500 { error: <message> }`
 
 ## Frontend
 
-### `public/index.html` — three regions
+### `public/index.html` — four regions
 
 1. **Upload area** — `<input type="file" accept=".txt,.log">` and a Parse button.
-2. **Search bar** — `<input type="search">` for live filtering.
-3. **Results table** — columns `Time | Event ID | Message`, monospace.
+2. **SN banner** — heading element above the table that shows `Device SN: <sn>` after a successful parse. Hidden until the first successful response.
+3. **Search bar** — `<input type="search">` for live filtering.
+4. **Results table** — columns `Time | Event ID | Message`, monospace.
 
 ### `public/app.js` flow
 
 ```
 on Parse click:
   1. POST /api/parse with FormData containing the file
-  2. Receive JSON array
-  3. Store in module-level allRecords
-  4. Render full table
+  2. Receive JSON: { sn, records }
+  3. Store in module-level state: currentSn, allRecords
+  4. Show SN banner with currentSn
+  5. Render full table
 
 on search input:
   1. Lowercase query
@@ -156,8 +181,8 @@ on search input:
 
 UI states:
   - while uploading: button disabled, label "Parsing…"
-  - on error: red error message div above table
-  - on success: error div hidden, table populated
+  - on error: red error message div above table; SN banner hidden
+  - on success: error div hidden, banner shown, table populated
 ```
 
 ### `public/styles.css`
@@ -188,8 +213,9 @@ Use Node's built-in `node:test` (zero dependencies). Run via `npm test` → `nod
 | Test file | Coverage |
 |---|---|
 | `dictionary.test.js` | All 5 sample events parsed; types/counts correct; quoted descriptions handled |
-| `parser.test.js` | Sample raw.txt → 5 records; blank lines skipped; short lines skipped |
+| `parser.test.js` | Sample raw → 5 records; blank lines skipped; short lines skipped |
 | `formatter.test.js` | One test per branch: `int` (event 2004, 2008), `str` (2015), `array` produces `F7,80,25,14,B0,1D` (2000), `none` (2075), unknown event, fewer/more params, invalid timestamp |
+| `sn.test.js` | Valid filename (`raw_NSB023567819006.txt`) → returns SN; `.log` extension accepted; rejects too-short SN, too-long SN, missing prefix, wrong extension, non-alphanumeric SN |
 
 ## Deployment
 
