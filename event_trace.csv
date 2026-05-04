@@ -1,0 +1,6 @@
+event_id,param_cnt,param_type,description
+2008,2,int,"Ble connection %d disconnect because of %d reason"
+2004,1,int,"Ble send pkt len: %d to mcu"
+2015,1,str,"Ble auth failed, the digital key id is: %s"
+2075,0,none,"celluar network working"
+2000,6,array,"Ble connected, dev mac is: "
