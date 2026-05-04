@@ -31,5 +31,13 @@ app.post('/api/parse', upload.single('logfile'), (req, res) => {
   }
 });
 
+app.use((err, req, res, _next) => {
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'file too large (max 5 MB)' });
+  }
+  console.error(err);
+  res.status(500).json({ error: err.message });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`LogParse listening on http://localhost:${PORT}`));
