@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LogParse</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>LogParse</h1>
+  <div class="upload-area">
+    <input type="file" id="fileInput" accept=".txt,.log">
+    <button id="parseBtn">Parse</button>
+  </div>
+  <div class="error" id="errorMsg" hidden></div>
+  <div class="sn-banner" id="snBanner" hidden></div>
+  <input type="search" id="search" placeholder="Filter messages..." disabled>
+  <table id="resultsTable">
+    <thead>
+      <tr><th>Time</th><th>Event ID</th><th>Message</th></tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+  <script src="app.js"></script>
+</body>
+</html>
