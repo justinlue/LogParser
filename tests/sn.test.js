@@ -10,6 +10,10 @@ test('extractSn returns SN for valid .log filename', () => {
   assert.equal(extractSn('raw_ABC123456789012.log'), 'ABC123456789012');
 });
 
+test('extractSn returns SN for valid .csv filename', () => {
+  assert.equal(extractSn('raw_NSBB22100D59F7B.csv'), 'NSBB22100D59F7B');
+});
+
 test('extractSn rejects filename without raw_ prefix', () => {
   assert.throws(() => extractSn('log_NSB023567819006.txt'), /filename must match/);
 });
@@ -23,7 +27,7 @@ test('extractSn rejects too-long SN', () => {
 });
 
 test('extractSn rejects wrong extension', () => {
-  assert.throws(() => extractSn('raw_NSB023567819006.csv'), /filename must match/);
+  assert.throws(() => extractSn('raw_NSB023567819006.json'), /filename must match/);
 });
 
 test('extractSn rejects non-alphanumeric SN', () => {

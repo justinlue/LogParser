@@ -3,35 +3,41 @@ import { strict as assert } from 'node:assert';
 import { formatRecord } from '../src/formatter.js';
 
 const DICT = new Map([
-  [2004, { paramCount: 1, paramType: 'int', description: 'Ble send pkt len: %d to mcu' }],
-  [2008, { paramCount: 2, paramType: 'int', description: 'Ble connection %d disconnect because of %d reason' }],
-  [2015, { paramCount: 1, paramType: 'str', description: 'Ble auth failed, the digital key id is: %s' }],
-  [2000, { paramCount: 6, paramType: 'array', description: 'Ble connected, dev mac is: ' }],
-  [2075, { paramCount: 0, paramType: 'none', description: 'celluar network working' }],
+  [2004, { paramCount: 1, paramType: 'INT32', description: 'Ble send pkt len: %d to mcu' }],
+  [2008, { paramCount: 2, paramType: 'INT32', description: 'Ble connection %d disconnect because of %d reason' }],
+  [2015, { paramCount: 1, paramType: 'STRING', description: 'Ble auth failed, the digital key id is: %s' }],
+  [2000, { paramCount: 6, paramType: 'BYTES', description: 'Ble connected, dev mac is: ' }],
+  [2075, { paramCount: 0, paramType: 'NONE', description: 'celluar network working' }],
+  [1021, { paramCount: 1, paramType: 'INT32', description: 'generate uwb session id is %x' }],
 ]);
 
-test('formatRecord formats int with single placeholder', () => {
+test('formatRecord formats INT32 with single %d placeholder', () => {
   const r = formatRecord({ rawTimestamp: 1777815062, eventId: 2004, params: ['128'] }, DICT);
   assert.equal(r.eventId, 2004);
   assert.equal(r.message, 'Ble send pkt len: 128 to mcu');
 });
 
-test('formatRecord formats int with two placeholders', () => {
+test('formatRecord formats INT32 with two %d placeholders', () => {
   const r = formatRecord({ rawTimestamp: 1777815358, eventId: 2008, params: ['0', '8'] }, DICT);
   assert.equal(r.message, 'Ble connection 0 disconnect because of 8 reason');
 });
 
-test('formatRecord formats str placeholder', () => {
+test('formatRecord formats INT32 with %x placeholder as lowercase hex', () => {
+  const r = formatRecord({ rawTimestamp: 1777815062, eventId: 1021, params: ['7953'] }, DICT);
+  assert.equal(r.message, 'generate uwb session id is 1f11');
+});
+
+test('formatRecord formats STRING %s placeholder', () => {
   const r = formatRecord({ rawTimestamp: 1777815294, eventId: 2015, params: ['a67c8b9d102c5f04'] }, DICT);
   assert.equal(r.message, 'Ble auth failed, the digital key id is: a67c8b9d102c5f04');
 });
 
-test('formatRecord formats array as comma-separated 2-digit hex bytes', () => {
-  const r = formatRecord({ rawTimestamp: 1777815141, eventId: 2000, params: ['247', '128', '37', '20', '176', '29'] }, DICT);
+test('formatRecord formats BYTES hex string as comma-separated uppercase byte pairs', () => {
+  const r = formatRecord({ rawTimestamp: 1777815141, eventId: 2000, params: ['f7802514b01d'] }, DICT);
   assert.equal(r.message, 'Ble connected, dev mac is: F7,80,25,14,B0,1D');
 });
 
-test('formatRecord formats none with no params', () => {
+test('formatRecord formats NONE with no params', () => {
   const r = formatRecord({ rawTimestamp: 1777815382, eventId: 2075, params: [] }, DICT);
   assert.equal(r.message, 'celluar network working');
 });
@@ -42,17 +48,17 @@ test('formatRecord renders unknown event with raw params', () => {
   assert.equal(r.message, '[unknown event 9999]: 1, 2, 3');
 });
 
-test('formatRecord with too few int params leaves placeholder literal', () => {
+test('formatRecord with too few INT32 params leaves placeholder literal', () => {
   const r = formatRecord({ rawTimestamp: 1777815358, eventId: 2008, params: ['5'] }, DICT);
   assert.equal(r.message, 'Ble connection 5 disconnect because of %d reason');
 });
 
-test('formatRecord with too many int params appends extras', () => {
+test('formatRecord with too many INT32 params appends extras', () => {
   const r = formatRecord({ rawTimestamp: 1777815062, eventId: 2004, params: ['128', '99', '7'] }, DICT);
   assert.equal(r.message, 'Ble send pkt len: 128 to mcu (+ extra: 99, 7)');
 });
 
-test('formatRecord with too many none params appends extras', () => {
+test('formatRecord with too many NONE params appends extras', () => {
   const r = formatRecord({ rawTimestamp: 1777815382, eventId: 2075, params: ['junk'] }, DICT);
   assert.equal(r.message, 'celluar network working (+ extra: junk)');
 });
@@ -68,7 +74,7 @@ test('formatRecord renders [invalid time] for non-numeric timestamp', () => {
   assert.equal(r.time, '[invalid time]');
 });
 
-test('formatRecord int with non-numeric param falls back to raw string', () => {
+test('formatRecord INT32 with non-numeric param falls back to raw string', () => {
   const r = formatRecord({ rawTimestamp: 1777815062, eventId: 2004, params: ['notanumber'] }, DICT);
   assert.equal(r.message, 'Ble send pkt len: notanumber to mcu');
 });

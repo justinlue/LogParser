@@ -15,49 +15,38 @@ export function formatRecord(record, dictionary) {
 }
 
 function buildMessage({ paramType, description }, params) {
-  if (paramType === 'array') {
-    return description + params.map(toHexByte).join(',');
+  if (paramType === 'BYTES') {
+    const hex = params[0] || '';
+    const bytes = hex.match(/.{1,2}/g) || [];
+    return description + bytes.map(b => b.toUpperCase()).join(',');
   }
-  if (paramType === 'none') {
+  if (paramType === 'NONE') {
     return params.length > 0
       ? `${description} (+ extra: ${params.join(', ')})`
       : description;
   }
-  if (paramType === 'int') {
-    return fillPlaceholders(description, '%d', params, toIntStr);
+  if (paramType === 'INT32') {
+    let idx = 0;
+    const result = description.replace(/%[dx]/g, match => {
+      if (idx >= params.length) return match;
+      const n = parseInt(params[idx++], 10);
+      if (Number.isNaN(n)) return params[idx - 1];
+      return match === '%d' ? String(n) : n.toString(16);
+    });
+    return idx < params.length
+      ? result + ` (+ extra: ${params.slice(idx).join(', ')})`
+      : result;
   }
-  if (paramType === 'str') {
-    return fillPlaceholders(description, '%s', params, p => p);
+  if (paramType === 'STRING') {
+    let idx = 0;
+    const result = description.replace(/%s/g, () =>
+      idx < params.length ? params[idx++] : '%s'
+    );
+    return idx < params.length
+      ? result + ` (+ extra: ${params.slice(idx).join(', ')})`
+      : result;
   }
   return description;
-}
-
-function fillPlaceholders(description, placeholder, params, transform) {
-  const parts = description.split(placeholder);
-  let result = parts[0];
-  let used = 0;
-  for (let i = 1; i < parts.length; i++) {
-    if (used < params.length) {
-      result += transform(params[used++]);
-    } else {
-      result += placeholder;
-    }
-    result += parts[i];
-  }
-  if (used < params.length) {
-    result += ` (+ extra: ${params.slice(used).join(', ')})`;
-  }
-  return result;
-}
-
-function toIntStr(p) {
-  const n = parseInt(p, 10);
-  return Number.isNaN(n) ? p : String(n);
-}
-
-function toHexByte(p) {
-  const n = parseInt(p, 10);
-  return Number.isNaN(n) ? p : n.toString(16).padStart(2, '0').toUpperCase();
 }
 
 function formatTimestamp(rawTimestamp) {

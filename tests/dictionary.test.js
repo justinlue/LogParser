@@ -2,12 +2,13 @@ import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { parseDictionaryCsv, loadDictionary } from '../src/dictionary.js';
 
-const SAMPLE_CSV = `event_id,param_cnt,param_type,description
-2008,2,int,"Ble connection %d disconnect because of %d reason"
-2004,1,int,"Ble send pkt len: %d to mcu"
-2015,1,str,"Ble auth failed, the digital key id is: %s"
-2075,0,none,"celluar network working"
-2000,6,array,"Ble connected, dev mac is: "
+const SAMPLE_CSV = `Version:1.0.1,,,,
+ID_VALUE,ID_NAME,TYPE,Parameters Number,Original Format
+2008,,INT32,2,"""Ble connection %d disconnect because of %d reason"""
+2004,,INT32,1,"""Ble send pkt len: %d to mcu"""
+2015,,STRING,1,"""Ble auth failed, the digital key id is: %s"""
+2075,,NONE,0,"""celluar network working"""
+2000,,BYTES,6,"""Ble connected, dev mac is: """
 `;
 
 test('parseDictionaryCsv parses all rows', () => {
@@ -26,7 +27,7 @@ test('parseDictionaryCsv extracts paramCount, paramType, description', () => {
   const dict = parseDictionaryCsv(SAMPLE_CSV);
   const e2008 = dict.get(2008);
   assert.equal(e2008.paramCount, 2);
-  assert.equal(e2008.paramType, 'int');
+  assert.equal(e2008.paramType, 'INT32');
   assert.equal(e2008.description, 'Ble connection %d disconnect because of %d reason');
 });
 
@@ -36,21 +37,21 @@ test('parseDictionaryCsv handles description with embedded comma', () => {
   assert.equal(e2015.description, 'Ble auth failed, the digital key id is: %s');
 });
 
-test('parseDictionaryCsv handles array type with trailing colon-space', () => {
+test('parseDictionaryCsv handles BYTES type with description prefix', () => {
   const dict = parseDictionaryCsv(SAMPLE_CSV);
   const e2000 = dict.get(2000);
-  assert.equal(e2000.paramType, 'array');
+  assert.equal(e2000.paramType, 'BYTES');
   assert.equal(e2000.description, 'Ble connected, dev mac is: ');
 });
 
-test('parseDictionaryCsv handles none type', () => {
+test('parseDictionaryCsv handles NONE type', () => {
   const dict = parseDictionaryCsv(SAMPLE_CSV);
   const e2075 = dict.get(2075);
-  assert.equal(e2075.paramType, 'none');
+  assert.equal(e2075.paramType, 'NONE');
   assert.equal(e2075.paramCount, 0);
 });
 
-test('parseDictionaryCsv skips header and ignores blank trailing lines', () => {
+test('parseDictionaryCsv skips version/header rows and ignores blank trailing lines', () => {
   const csv = SAMPLE_CSV + '\n\n   \n';
   const dict = parseDictionaryCsv(csv);
   assert.equal(dict.size, 5);
@@ -59,5 +60,5 @@ test('parseDictionaryCsv skips header and ignores blank trailing lines', () => {
 test('loadDictionary reads from disk', () => {
   const dict = loadDictionary('./event_trace.csv');
   assert.ok(dict.size >= 1, 'should load at least one event');
-  assert.ok(dict.has(2004), 'should contain known event 2004 from project event_trace.csv');
+  assert.ok(dict.has(1041), 'should contain known event 1041 from project event_trace.csv');
 });
