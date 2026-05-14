@@ -41,22 +41,39 @@ parseBtn.addEventListener('click', async () => {
   }
 });
 
-search.addEventListener('input', () => {
+let searchDebounceTimer = null;
+
+function applyFilter() {
   const q = search.value.trim().toLowerCase();
   if (!q) {
     render(allRecords);
     return;
   }
+  const terms = q.split(',').map(t => t.trim()).filter(t => t.length > 0);
   const filtered = allRecords.filter(r =>
-    r.time.toLowerCase().includes(q) ||
-    String(r.eventId).includes(q) ||
-    r.message.toLowerCase().includes(q)
+    terms.some(t =>
+      r.time.toLowerCase().includes(t) ||
+      String(r.eventId).includes(t) ||
+      r.message.toLowerCase().includes(t)
+    )
   );
   render(filtered);
+}
+
+search.addEventListener('input', () => {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(applyFilter, 300);
+});
+
+search.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    clearTimeout(searchDebounceTimer);
+    applyFilter();
+  }
 });
 
 function render(records) {
-  resultsBody.innerHTML = '';
+  const fragment = document.createDocumentFragment();
   for (const r of records) {
     const tr = document.createElement('tr');
     const tdTime = document.createElement('td');
@@ -68,8 +85,10 @@ function render(records) {
     tr.appendChild(tdTime);
     tr.appendChild(tdId);
     tr.appendChild(tdMsg);
-    resultsBody.appendChild(tr);
+    fragment.appendChild(tr);
   }
+  resultsBody.innerHTML = '';
+  resultsBody.appendChild(fragment);
 }
 
 function showError(msg) {
