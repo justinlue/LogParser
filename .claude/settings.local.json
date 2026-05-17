@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test *)",
+      "Bash(node --test tests/*.test.js)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Skill(frontend-design:frontend-design)",
+      "Bash(cd /d D:/Workspace/LogParse)",
+      "Bash(node server.js)",
+      "Bash(curl -s http://localhost:3000/)"
+    ]
+  }
+}
