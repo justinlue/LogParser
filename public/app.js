@@ -80,11 +80,14 @@ function applyFilter() {
   }
   const terms = q.split(',').map(t => t.trim()).filter(t => t.length > 0);
   const filtered = allRecords.filter(r =>
-    terms.some(t =>
-      r.time.toLowerCase().includes(t) ||
-      String(r.eventId).includes(t) ||
-      r.message.toLowerCase().includes(t)
-    )
+    terms.some(t => {
+      if (/^\d+$/.test(t)) return String(r.eventId).includes(t);
+      return (
+        r.time.toLowerCase().includes(t) ||
+        String(r.eventId).includes(t) ||
+        r.message.toLowerCase().includes(t)
+      );
+    })
   );
   render(filtered);
 }
