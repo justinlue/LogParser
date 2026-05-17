@@ -2,24 +2,99 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>LogParse</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOGPARSE // SYS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>LogParse</h1>
-  <div class="upload-area">
-    <input type="file" id="fileInput" accept=".txt,.log,.csv">
-    <button id="parseBtn">Parse</button>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="grid-bg"   aria-hidden="true"></div>
+  <div class="corner-glow" aria-hidden="true"></div>
+  <div class="scan-line" id="scanLine" aria-hidden="true"></div>
+
+  <div class="terminal">
+
+    <header class="terminal-header">
+      <div class="header-top">
+        <div class="sys-id">LOGPARSE<span class="blink">_</span></div>
+        <div class="header-meta">
+          <span class="meta-tag">MEM://64K</span>
+          <span class="meta-tag">STATUS:<span class="status-ok">■ ONLINE</span></span>
+          <span class="meta-tag" id="headerClock">00:00:00</span>
+        </div>
+      </div>
+      <div class="header-sub">// EMBEDDED DEVICE LOG ANALYSIS SYSTEM &nbsp;|&nbsp; v2.1.0 &nbsp;|&nbsp; SECURE CHANNEL EST.</div>
+    </header>
+
+    <main class="terminal-body">
+
+      <section class="module">
+        <div class="module-label">▸ INPUT_STREAM</div>
+        <div class="upload-area">
+          <label class="file-drop" for="fileInput">
+            <span class="file-icon">◈</span>
+            <span class="file-text" id="fileText">SELECT LOG FILE &nbsp;(.TXT &nbsp;.LOG &nbsp;.CSV)</span>
+          </label>
+          <input type="file" id="fileInput" accept=".txt,.log,.csv" aria-label="Log file input">
+          <button id="parseBtn">
+            <span class="btn-arrow">▶</span>
+            <span id="btnLabel">EXECUTE</span>
+          </button>
+        </div>
+      </section>
+
+      <div class="status-bar error-bar" id="errorMsg" hidden>
+        <span class="bar-prefix err-prefix">ERR::</span>
+        <span id="errorText"></span>
+      </div>
+
+      <div class="status-bar sn-bar" id="snBanner" hidden>
+        <span class="bar-prefix sn-prefix">DEVICE_ID</span>
+        <span class="bar-sep">::</span>
+        <span id="snValue" class="sn-value">—</span>
+        <span class="sn-acq">● ACQUIRED</span>
+      </div>
+
+      <section class="search-row">
+        <div class="search-wrap">
+          <span class="search-prompt">&gt;_</span>
+          <input type="search" id="search" placeholder="FILTER EVENTS... (COMMA-SEPARATED TERMS)" disabled>
+        </div>
+        <div class="rec-count" id="recCount"></div>
+      </section>
+
+      <section class="data-section">
+        <div class="module-label">▸ EVENT_LOG</div>
+        <div class="table-wrap">
+          <table id="resultsTable">
+            <thead>
+              <tr>
+                <th class="col-num">#</th>
+                <th>TIMESTAMP</th>
+                <th>EVT_ID</th>
+                <th>MESSAGE</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="terminal-footer">
+      <span>SYS://LOGPARSE</span>
+      <span class="f-sep">◈</span>
+      <span>SECURE_CH_ACTIVE</span>
+      <span class="f-sep">◈</span>
+      <span id="footerClock">00:00:00 UTC</span>
+    </footer>
+
   </div>
-  <div class="error" id="errorMsg" hidden></div>
-  <div class="sn-banner" id="snBanner" hidden></div>
-  <input type="search" id="search" placeholder="Filter messages..." disabled>
-  <table id="resultsTable">
-    <thead>
-      <tr><th>Time</th><th>Event ID</th><th>Message</th></tr>
-    </thead>
-    <tbody id="resultsBody"></tbody>
-  </table>
+
   <script src="app.js"></script>
 </body>
 </html>

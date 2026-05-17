@@ -1,35 +1,63 @@
-const fileInput = document.getElementById('fileInput');
-const parseBtn = document.getElementById('parseBtn');
-const errorMsg = document.getElementById('errorMsg');
-const snBanner = document.getElementById('snBanner');
-const search = document.getElementById('search');
+const fileInput  = document.getElementById('fileInput');
+const parseBtn   = document.getElementById('parseBtn');
+const btnLabel   = document.getElementById('btnLabel');
+const errorMsg   = document.getElementById('errorMsg');
+const errorText  = document.getElementById('errorText');
+const snBanner   = document.getElementById('snBanner');
+const snValue    = document.getElementById('snValue');
+const fileText   = document.getElementById('fileText');
+const search     = document.getElementById('search');
 const resultsBody = document.getElementById('resultsBody');
+const recCount   = document.getElementById('recCount');
+const scanLine   = document.getElementById('scanLine');
 
 let allRecords = [];
+
+// Live UTC clock
+function updateClock() {
+  const t = new Date().toISOString().slice(11, 19);
+  const h = document.getElementById('headerClock');
+  const f = document.getElementById('footerClock');
+  if (h) h.textContent = t;
+  if (f) f.textContent = t + ' UTC';
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Show chosen filename in the drop zone
+fileInput.addEventListener('change', () => {
+  const f = fileInput.files[0];
+  fileText.textContent = f
+    ? f.name.toUpperCase()
+    : 'SELECT LOG FILE  (.TXT  .LOG  .CSV)';
+});
 
 parseBtn.addEventListener('click', async () => {
   const file = fileInput.files[0];
   if (!file) {
-    showError('Please choose a file first.');
+    showError('No file selected. Choose a log file to proceed.');
     return;
   }
+
   parseBtn.disabled = true;
-  parseBtn.textContent = 'Parsing…';
+  btnLabel.textContent = 'PARSING...';
+  document.body.classList.add('parsing');
   errorMsg.hidden = true;
   snBanner.hidden = true;
+  recCount.textContent = '';
 
   const formData = new FormData();
   formData.append('logfile', file);
 
   try {
-    const res = await fetch('/api/parse', { method: 'POST', body: formData });
+    const res  = await fetch('/api/parse', { method: 'POST', body: formData });
     const json = await res.json();
     if (!res.ok) {
       showError(json.error || `HTTP ${res.status}`);
       return;
     }
     allRecords = json.records;
-    snBanner.textContent = `Device SN: ${json.sn}`;
+    snValue.textContent = json.sn;
     snBanner.hidden = false;
     search.disabled = false;
     render(allRecords);
@@ -37,7 +65,8 @@ parseBtn.addEventListener('click', async () => {
     showError(err.message);
   } finally {
     parseBtn.disabled = false;
-    parseBtn.textContent = 'Parse';
+    btnLabel.textContent = 'EXECUTE';
+    document.body.classList.remove('parsing');
   }
 });
 
@@ -74,24 +103,36 @@ search.addEventListener('keydown', (e) => {
 
 function render(records) {
   const fragment = document.createDocumentFragment();
-  for (const r of records) {
+  for (let i = 0; i < records.length; i++) {
+    const r  = records[i];
     const tr = document.createElement('tr');
+
+    const tdNum  = document.createElement('td');
+    tdNum.className = 'col-num';
+    tdNum.textContent = String(i + 1).padStart(4, '0');
+
     const tdTime = document.createElement('td');
+    tdTime.className = 'col-time';
     tdTime.textContent = r.time;
+
     const tdId = document.createElement('td');
+    tdId.className = 'col-id';
     tdId.textContent = String(r.eventId);
+
     const tdMsg = document.createElement('td');
+    tdMsg.className = 'col-msg';
     tdMsg.textContent = r.message;
-    tr.appendChild(tdTime);
-    tr.appendChild(tdId);
-    tr.appendChild(tdMsg);
+
+    tr.append(tdNum, tdTime, tdId, tdMsg);
     fragment.appendChild(tr);
   }
   resultsBody.innerHTML = '';
   resultsBody.appendChild(fragment);
+
+  recCount.textContent = `${records.length} / ${allRecords.length} RECORDS`;
 }
 
 function showError(msg) {
-  errorMsg.textContent = msg;
+  errorText.textContent = msg;
   errorMsg.hidden = false;
 }
