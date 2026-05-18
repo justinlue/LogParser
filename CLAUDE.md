@@ -33,9 +33,9 @@ uploaded buffer → handleParseRequest (routes.js)
 - `src/formatter.js` — dispatches on `paramType`: `int` fills `%d` placeholders via `parseInt`, `str` fills `%s` placeholders verbatim, `array` appends all params as comma-joined 2-digit uppercase hex bytes (e.g. `F7,80,25,14,B0,1D`), `none` emits description verbatim. Extra params append ` (+ extra: ...)` for `int`/`str`/`none`; missing params leave placeholders literal. Non-numeric timestamps produce `[invalid time]`.
 - `src/sn.js` — validates upload filename against `/^raw_([A-Za-z0-9]{15})\.(txt|log)$/`; throws on mismatch.
 - `src/routes.js` — pure function `handleParseRequest(filename, buffer, dictionary) → { status, body }`. No Express coupling; independently testable.
-- `server.js` — Express bootstrap: loads dictionary, mounts multer (5 MB limit, `memoryStorage`), serves `public/` as static, handles `POST /api/parse`, includes an error middleware for `LIMIT_FILE_SIZE → 413`.
+- `server.js` — Express bootstrap: loads dictionary, mounts multer (5 MB limit, `memoryStorage`), serves `public/` as static, handles `POST /api/parse` and `GET /api/query`, includes an error middleware for `LIMIT_FILE_SIZE → 413`.
 
-**Frontend** (`public/`) — vanilla HTML/CSS/JS, no framework or bundler. `app.js` POSTs to `/api/parse`, receives `{ sn, records }`, shows a device SN banner, populates a monospace table, and filters rows live on search input.
+**Frontend** (`public/`) — vanilla HTML/CSS/JS, no framework or bundler. `app.js` POSTs to `/api/parse`, receives `{ sn, records }`, shows a device SN banner, populates a monospace table, and filters rows live on search input. The REMOTE_FETCH panel also GETs `/api/query` to pull logs from Aliyun without a local file.
 
 ## Key Data Contracts
 
@@ -43,6 +43,23 @@ uploaded buffer → handleParseRequest (routes.js)
 - Response shape: `{ sn: string, records: Array<{ time: string, eventId: number, message: string }> }`
 - Time format: `YYYY-MM-DD HH:mm:ss` UTC, derived from Unix epoch seconds × 1000
 - Dictionary CSV columns: `event_id, param_cnt, param_type, description` (quoted descriptions with embedded commas are handled)
+
+## Remote Fetch (Aliyun)
+
+The REMOTE_FETCH panel queries Aliyun SLS without requiring a local file upload.
+
+**Endpoint:** `GET /api/query?sn=<SN>&start=<YYYY-MM-DD>&end=<YYYY-MM-DD>`
+- `sn` — required; 15-char alphanumeric device serial number
+- `start` / `end` — optional date range (inclusive). When omitted the server fetches all available logs.
+
+**How it works:** `server.js` spawns `query.py` via `execFileSync`, passing `--sn`, `--start`, and `--end`. `query.py` authenticates with Aliyun SLS and returns a JSON object. The server converts the structured response to CSV, runs it through `handleParseRequest`, saves a copy to `downloads/raw_<sn>_converted_<ts>.csv`, and returns `{ sn, records }` in the same shape as `/api/parse`.
+
+**Environment:**
+- `TIMEZONE_OFFSET_HOURS` — integer hours to shift timestamps (e.g. `8` for CST). Defaults to `0` (UTC) if unset.
+
+**Same-day date behaviour:** When the user enters the same date for both from and to, the frontend automatically adds one day to the end date before sending the request. This compensates for the remote server always starting from `00:00:00` of that day, which would otherwise return an empty range.
+
+**`downloads/`** — created automatically on first fetch; stores intermediate converted CSV files for debugging.
 
 ## Dictionary Updates
 

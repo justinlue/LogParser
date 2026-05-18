@@ -54,8 +54,14 @@ queryBtn.addEventListener('click', async () => {
 
   const params = new URLSearchParams();
   params.set('sn', sn);
+  let endVal = endInput.value;
+  if (startInput.value && endVal && startInput.value === endVal) {
+    const d = new Date(endVal + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 1);
+    endVal = d.toISOString().slice(0, 10);
+  }
   if (startInput.value) params.set('start', startInput.value);
-  if (endInput.value) params.set('end', endInput.value);
+  if (endVal) params.set('end', endVal);
 
   try {
     const res = await fetch(`/api/query?${params.toString()}`);

@@ -190,6 +190,94 @@ body.parsing .scan-line {
   margin-bottom: 5px;
 }
 
+/* ─── Remote Fetch ───────────────────────────────── */
+.fetch-area {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.fetch-area input {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text-b);
+  font-family: var(--font-m);
+  font-size: 12.5px;
+  letter-spacing: 1px;
+  padding: 9px 14px;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  caret-color: var(--accent3);
+}
+
+.fetch-area input:focus {
+  border-color: var(--accent3);
+  box-shadow: 0 0 16px rgba(0,200,255,.15);
+}
+
+#snInput { flex: 1; }
+#snInput::placeholder { color: var(--text-d); }
+
+#startInput,
+#endInput {
+  width: 148px;
+  color-scheme: dark;
+}
+
+#startInput::-webkit-calendar-picker-indicator,
+#endInput::-webkit-calendar-picker-indicator {
+  filter: invert(0.5) sepia(1) saturate(3) hue-rotate(155deg);
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+#queryBtn {
+  background: transparent;
+  border: 1px solid var(--accent3);
+  color: var(--accent3);
+  padding: 0 28px;
+  font-family: var(--font-m);
+  font-size: 13px;
+  letter-spacing: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-transform: uppercase;
+  position: relative;
+  overflow: hidden;
+  transition: background .2s, box-shadow .2s;
+  text-shadow: var(--glow3);
+  box-shadow: 0 0 14px rgba(0,200,255,.2), inset 0 0 14px rgba(0,200,255,.04);
+  white-space: nowrap;
+  min-width: 140px;
+  min-height: 40px;
+}
+
+#queryBtn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -120%;
+  width: 80%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,200,255,.14), transparent);
+  transition: left .5s ease;
+}
+
+#queryBtn:hover::before { left: 150%; }
+
+#queryBtn:hover {
+  background: rgba(0,200,255,.07);
+  box-shadow: 0 0 30px rgba(0,200,255,.35), inset 0 0 20px rgba(0,200,255,.08);
+}
+
+#queryBtn:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+#queryBtn:disabled::before { display: none; }
+
 /* ─── Upload ─────────────────────────────────────── */
 .module { margin-bottom: 8px; }
 
