@@ -1,0 +1,7 @@
+{
+    "access_key_id": "LTAI5tAk7A2k2HG55LUAmdVy",
+    "access_key_secret": "owHxM3NAOxDO3uXmPpFLRkD5iDfqS6",
+    "endpoint": "cn-shanghai.log.aliyuncs.com",
+    "project_name": "hd-log-shanghai",
+    "logstore_name": "hd-logstore-shanghai"
+}

@@ -32,6 +32,19 @@
     <main class="terminal-body">
 
       <section class="module">
+        <div class="module-label">▸ REMOTE_FETCH</div>
+        <div class="fetch-area">
+          <input id="snInput" placeholder="SN e.g. NSBB22100D59F7B" aria-label="Device SN">
+          <input type="date" id="startInput" aria-label="Start date (YYYY-MM-DD)">
+          <input type="date" id="endInput" aria-label="End date (YYYY-MM-DD)">
+          <button id="queryBtn">
+            <span class="btn-arrow">⤓</span>
+            <span id="queryLabel">FETCH</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="module">
         <div class="module-label">▸ INPUT_STREAM</div>
         <div class="upload-area">
           <label class="file-drop" for="fileInput">

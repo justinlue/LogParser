@@ -1,6 +1,11 @@
 const fileInput  = document.getElementById('fileInput');
 const parseBtn   = document.getElementById('parseBtn');
 const btnLabel   = document.getElementById('btnLabel');
+const queryBtn   = document.getElementById('queryBtn');
+const queryLabel = document.getElementById('queryLabel');
+const snInput    = document.getElementById('snInput');
+const startInput = document.getElementById('startInput');
+const endInput   = document.getElementById('endInput');
 const errorMsg   = document.getElementById('errorMsg');
 const errorText  = document.getElementById('errorText');
 const snBanner   = document.getElementById('snBanner');
@@ -30,6 +35,48 @@ fileInput.addEventListener('change', () => {
   fileText.textContent = f
     ? f.name.toUpperCase()
     : 'SELECT LOG FILE  (.TXT  .LOG  .CSV)';
+});
+
+// Remote fetch button: query by sn and optional date range
+queryBtn.addEventListener('click', async () => {
+  const sn = (snInput.value || '').trim();
+  if (!sn) {
+    showError('Please enter device SN (e.g. NSBB22100D59F7B)');
+    return;
+  }
+
+  queryBtn.disabled = true;
+  queryLabel.textContent = 'FETCHING...';
+  document.body.classList.add('parsing');
+  errorMsg.hidden = true;
+  snBanner.hidden = true;
+  recCount.textContent = '';
+
+  const params = new URLSearchParams();
+  params.set('sn', sn);
+  if (startInput.value) params.set('start', startInput.value);
+  if (endInput.value) params.set('end', endInput.value);
+
+  try {
+    const res = await fetch(`/api/query?${params.toString()}`);
+    const json = await res.json();
+    if (!res.ok) {
+      showError(json.error || `HTTP ${res.status}`);
+      return;
+    }
+    // expected response: { sn, records }
+    allRecords = json.records || [];
+    snValue.textContent = json.sn || sn;
+    snBanner.hidden = false;
+    search.disabled = false;
+    render(allRecords);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    queryBtn.disabled = false;
+    queryLabel.textContent = 'FETCH';
+    document.body.classList.remove('parsing');
+  }
 });
 
 parseBtn.addEventListener('click', async () => {
