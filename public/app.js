@@ -76,6 +76,7 @@ queryBtn.addEventListener('click', async () => {
     snBanner.hidden = false;
     search.disabled = false;
     render(allRecords);
+    clearError();
   } catch (err) {
     showError(err.message);
   } finally {
@@ -114,6 +115,7 @@ parseBtn.addEventListener('click', async () => {
     snBanner.hidden = false;
     search.disabled = false;
     render(allRecords);
+    clearError();
   } catch (err) {
     showError(err.message);
   } finally {
@@ -244,4 +246,9 @@ function render(records) {
 function showError(msg) {
   errorText.textContent = msg;
   errorMsg.hidden = false;
+}
+
+function clearError() {
+  errorMsg.hidden = true;
+  errorText.textContent = '';
 }
