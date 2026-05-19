@@ -157,8 +157,54 @@ search.addEventListener('keydown', (e) => {
   }
 });
 
+function parseVehicleStatusMessage(msg) {
+  const map = {};
+  msg.split(';').forEach(part => {
+    const idx = part.indexOf(':');
+    if (idx === -1) return;
+    const k = part.slice(0, idx).trim();
+    const v = part.slice(idx + 1).trim();
+    if (k) map[k] = v;
+  });
+  return map;
+}
+
+function buildVehicleStatusCell(msg, lastParsed) {
+  const td = document.createElement('td');
+  td.className = 'col-msg';
+  const parts = [];
+  msg.split(';').forEach(part => {
+    const idx = part.indexOf(':');
+    if (idx === -1) {
+      const k = part.trim();
+      if (k) parts.push({ k, v: null });
+      return;
+    }
+    const k = part.slice(0, idx).trim();
+    const v = part.slice(idx + 1).trim();
+    if (k) parts.push({ k, v });
+  });
+
+  parts.forEach((part, i) => {
+    if (i > 0) td.appendChild(document.createTextNode('; '));
+    const text = part.v !== null ? `${part.k}: ${part.v}` : part.k;
+    const changed = lastParsed !== null && part.k in lastParsed && lastParsed[part.k] !== part.v;
+    if (changed) {
+      const span = document.createElement('span');
+      span.className = 'changed-field';
+      span.textContent = text;
+      td.appendChild(span);
+    } else {
+      td.appendChild(document.createTextNode(text));
+    }
+  });
+  return td;
+}
+
 function render(records) {
   const fragment = document.createDocumentFragment();
+  let lastVehicleStatus = null;
+
   for (let i = 0; i < records.length; i++) {
     const r  = records[i];
     const tr = document.createElement('tr');
@@ -175,9 +221,16 @@ function render(records) {
     tdId.className = 'col-id';
     tdId.textContent = String(r.eventId);
 
-    const tdMsg = document.createElement('td');
-    tdMsg.className = 'col-msg';
-    tdMsg.textContent = r.message;
+    let tdMsg;
+    if (r.eventId === 3025) {
+      const parsed = parseVehicleStatusMessage(r.message);
+      tdMsg = buildVehicleStatusCell(r.message, lastVehicleStatus);
+      lastVehicleStatus = parsed;
+    } else {
+      tdMsg = document.createElement('td');
+      tdMsg.className = 'col-msg';
+      tdMsg.textContent = r.message;
+    }
 
     tr.append(tdNum, tdTime, tdId, tdMsg);
     fragment.appendChild(tr);

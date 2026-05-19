@@ -530,12 +530,6 @@ thead tr {
   border-bottom: 2px solid var(--accent);
 }
 
-/* thin accent line above thead */
-thead tr::before {
-  content: '';
-  display: table-cell;
-}
-
 th {
   padding: 11px 14px;
   text-align: left;
@@ -581,6 +575,12 @@ td.col-id {
 }
 
 td.col-msg { color: var(--text-b); }
+
+.changed-field {
+  color: var(--accent2);
+  text-shadow: var(--glow2);
+  font-weight: bold;
+}
 
 tbody tr { transition: background .1s; }
 
