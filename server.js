@@ -84,12 +84,13 @@ app.get('/api/query', (req, res) => {
           let startEpoch = null;
           let endEpoch = null;
           if (startParam) {
-            const s = new Date(startParam + 'T00:00:00Z');
-            if (!isNaN(s)) startEpoch = Math.floor(s.getTime()/1000);
+            // interpret provided date as local midnight (UTC+8)
+            const s = new Date(startParam + 'T00:00:00+08:00');
+            if (!isNaN(s)) startEpoch = Math.floor(s.getTime() / 1000);
           }
           if (endParam) {
-            const eDate = new Date(endParam + 'T23:59:59Z');
-            if (!isNaN(eDate)) endEpoch = Math.floor(eDate.getTime()/1000);
+            const eDate = new Date(endParam + 'T23:59:59+08:00');
+            if (!isNaN(eDate)) endEpoch = Math.floor(eDate.getTime() / 1000);
           }
           const filtered = parsed.datas.filter(d => {
             const recv = d['__tag__:__receive_time__'] || d['__tag__:__receive_time__'];
@@ -105,7 +106,7 @@ app.get('/api/query', (req, res) => {
             if (d['__tag__:t']) {
               const dt = new Date(d['__tag__:t'] + 'Z');
               if (!isNaN(dt)) {
-                const rv = Math.floor(dt.getTime()/1000);
+                const rv = Math.floor(dt.getTime() / 1000);
                 if (startEpoch !== null && rv < startEpoch) return false;
                 if (endEpoch !== null && rv > endEpoch) return false;
                 return true;
@@ -129,7 +130,7 @@ app.get('/api/query', (req, res) => {
             const timecol = d['__time__'] || '';
             const topic = d['__topic__'] || '';
             // wrap FG_log_0 in double quotes; other fields are raw
-            return '"' + fg + '",' + [src, client_ip, pack_id, receive_time, e, snTag, t, timecol, topic].map(x => (x===undefined? '': String(x))).join(',');
+            return '"' + fg + '",' + [src, client_ip, pack_id, receive_time, e, snTag, t, timecol, topic].map(x => (x === undefined ? '' : String(x))).join(',');
           }).join('\n');
           const csvText = header + '\n' + rows;
           // save converted CSV to downloads
@@ -161,7 +162,44 @@ app.get('/api/query', (req, res) => {
     }
 
     if (result && result.datas) {
-      const csvText = result.datas.map(d => JSON.stringify(d)).join('\n');
+      // filter datas by requested start/end (treat dates as local midnight UTC+8)
+      let datas = result.datas;
+      const startParam = req.query.start;
+      const endParam = req.query.end;
+      if (startParam || endParam) {
+        let startEpoch = null;
+        let endEpoch = null;
+        if (startParam) {
+          const s = new Date(startParam + 'T00:00:00+08:00');
+          if (!isNaN(s)) startEpoch = Math.floor(s.getTime() / 1000);
+        }
+        if (endParam) {
+          const eDate = new Date(endParam + 'T23:59:59+08:00');
+          if (!isNaN(eDate)) endEpoch = Math.floor(eDate.getTime() / 1000);
+        }
+        datas = datas.filter(d => {
+          const recv = d['__tag__:__receive_time__'] || d['__tag__:__receive_time__'];
+          if (recv) {
+            const r = parseInt(String(recv).replace(/\D/g, ''), 10);
+            if (!isNaN(r)) {
+              if (startEpoch !== null && r < startEpoch) return false;
+              if (endEpoch !== null && r > endEpoch) return false;
+              return true;
+            }
+          }
+          if (d['__tag__:t']) {
+            const dt = new Date(d['__tag__:t'] + 'Z');
+            if (!isNaN(dt)) {
+              const rv = Math.floor(dt.getTime() / 1000);
+              if (startEpoch !== null && rv < startEpoch) return false;
+              if (endEpoch !== null && rv > endEpoch) return false;
+              return true;
+            }
+          }
+          return true;
+        });
+      }
+      const csvText = datas.map(d => JSON.stringify(d)).join('\n');
       const buffer = Buffer.from(csvText, 'utf8');
       const { status, body } = handleParseRequest(`raw_${sn}.log`, buffer, dictionary);
       return res.status(status).json(body);

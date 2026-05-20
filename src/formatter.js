@@ -44,6 +44,17 @@ function buildMessage(eventId, { paramType, description }, params) {
     }
   }
 
+  // vehicle setting events: 1388, 1395, 1340, 1339
+  if ([1388, 1395, 1340, 1339].includes(eventId)) {
+    const hex = params[0] || '';
+    try {
+      const obj = parseVehicleSetting(hex);
+      return Object.entries(obj).map(([k, v]) => `${k}: ${v}`).join('; ');
+    } catch (err) {
+      return description + ` (+ parse error: ${err.message})`;
+    }
+  }
+
   if (paramType === 'BYTES') {
     const hex = params[0] || '';
     const bytes = hex.match(/.{1,2}/g) || [];
@@ -78,6 +89,108 @@ function buildMessage(eventId, { paramType, description }, params) {
   return description;
 }
 
+function parseVehicleSetting(hex) {
+  if (!hex) throw new Error('no bytes');
+  const clean = String(hex).replace(/[^0-9a-fA-F]/g, '');
+  const buf = Buffer.from(clean, 'hex');
+
+  const config = {
+    struct: "<B H BBB",
+    trans: {
+      "Octer0": { is_next: true, mark: "0xFF", offset: 0, trans: {
+        "lock_win_lift_en": { is_next: false, mark: "0x01", offset: 0 },
+        "peps_en": { is_next: false, mark: "0x02", offset: 1 },
+        "kick_en": { is_next: false, mark: "0x04", offset: 2 },
+        "anti_theft_en": { is_next: false, mark: "0x08", offset: 3 },
+        "repair_mode_en": { is_next: false, mark: "0x10", offset: 4 },
+        "car_show_mode_en": { is_next: false, mark: "0x20", offset: 5 },
+        "car_ctl_mode": { is_next: false, mark: "0x40", offset: 6 },
+        "lock_whistle_en": { is_next: false, mark: "0x80", offset: 7 }
+      }},
+      "car_type": { is_next: false, mark: "0xFFFF", offset: 0 },
+      "key_pwr_on_time": { is_next: false, mark: "0xFF", offset: 0 },
+      "low_power_alarm_thr": { is_next: false, mark: "0xFF", offset: 0 },
+      "Octer5": { is_next: true, mark: "0xFF", offset: 0, trans: {
+        "anti-play": { is_next: false, mark: "0x01", offset: 0 },
+        "trunk-ctrl-mode": { is_next: false, mark: "0x0e", offset: 1 },
+        "approach_vehicle_wkup_en": { is_next: false, mark: "0x10", offset: 4 },
+        "recv": { is_next: false, mark: "0xe0", offset: 5 }
+      }}
+    },
+    show: ["lock_win_lift_en","peps_en","kick_en","anti_theft_en","repair_mode_en","car_show_mode_en",
+           "car_ctl_mode","lock_whistle_en","car_type","key_pwr_on_time","low_power_alarm_thr",
+           "anti-play","trunk-ctrl-mode","approach_vehicle_wkup_en"]
+  };
+
+  function parseStructTokens(structStr){
+    const s = String(structStr).trim();
+    const inner = s.startsWith('<') ? s.slice(1) : s;
+    const parts = inner.split(/\s+/).map(t => t.replace(/,/g,''));
+    const tokens = [];
+    for (const p of parts) {
+      if (!p) continue;
+      const m = p.match(/^(\d+)([A-Za-z])$/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        const ch = m[2];
+        for (let i = 0; i < n; i++) tokens.push(ch);
+        continue;
+      }
+      if (/^[A-Za-z]+$/.test(p)) {
+        for (const ch of p) tokens.push(ch);
+        continue;
+      }
+      tokens.push(p);
+    }
+    return tokens;
+  }
+  function sizeOfToken(tok){
+    if(tok === 'B') return 1;
+    if(tok === 'H') return 2;
+    throw new Error('Unsupported token '+tok);
+  }
+  function readUIntLE(buffer, offset, size){
+    if(size === 1) return offset < buffer.length ? buffer.readUInt8(offset) : 0;
+    if(size === 2) return offset + 1 < buffer.length ? buffer.readUInt16LE(offset) : ((buffer[offset]||0) | ((buffer[offset+1]||0) << 8));
+    throw new Error('Unsupported size '+size);
+  }
+
+  const tokens = parseStructTokens(config.struct);
+  const keys = Object.keys(config.trans);
+  const layout = {};
+  let cur = 0;
+  for(let i=0;i<keys.length;i++){
+    const key = keys[i];
+    const tok = tokens[i] || 'B';
+    const sz = sizeOfToken(tok);
+    layout[key] = { offset: cur, size: sz, def: config.trans[key] };
+    cur += sz;
+  }
+
+  const out = {};
+  for(const [field, info] of Object.entries(layout)){
+    const baseVal = readUIntLE(buf, info.offset, info.size);
+    const entry = info.def;
+    if(entry.is_next && entry.trans){
+      for(const [subk, subv] of Object.entries(entry.trans)){
+        const mask = Number.parseInt(String(subv.mark), 16);
+        const off = subv.offset || 0;
+        const val = (baseVal & mask) >>> off;
+        out[subk] = val;
+      }
+    } else {
+      const mask = Number.parseInt(String(entry.mark), 16);
+      const off = entry.offset || 0;
+      const val = (baseVal & mask) >>> off;
+      out[field] = val;
+    }
+  }
+
+  const result = {};
+  for(const k of config.show) result[k] = out[k];
+  return result;
+}
+
 function parseVehicleStatus(hex) {
   if (!hex) throw new Error('no bytes');
   const clean = hex.replace(/[^0-9a-fA-F]/g, '');
@@ -101,6 +214,8 @@ function parseVehicleStatus(hex) {
 
   const raw = {
     startup: (byte0 >> 0) & 1,
+    lock: (byte1 >> 5) & 1,
+    gear_pos: b(35),
     door_lf: (byte0 >> 1) & 1,
     door_rf: (byte0 >> 2) & 1,
     door_lr: (byte0 >> 3) & 1,
@@ -114,7 +229,7 @@ function parseVehicleStatus(hex) {
     win_lr: (byte1 >> 2) & 1,
     win_rr: (byte1 >> 3) & 1,
     win_sky: (byte1 >> 4) & 1,
-    lock: (byte1 >> 5) & 1,
+    
     repair: (byte1 >> 6) & 1,
     air_cond: (byte1 >> 7) & 1,
 
@@ -153,7 +268,7 @@ function parseVehicleStatus(hex) {
     temper_inside_raw: readInt16BE(29),
     ac_left_raw: readInt16BE(31),
     ac_right_raw: readInt16BE(33),
-    gear_pos: b(35),
+    
 
     oil_consumption_raw: b(36),
     oil_consumption_ave_raw: b(37),

@@ -89,29 +89,40 @@ def main():
         client = LogClient(endpoint, access_key_id, access_key_secret)
         dbg('LogClient created')
 
-        # convert provided YYYY-MM-DD dates to epoch seconds (UTC)
-        from_time = None
-        to_time = None
-        if args.start:
+        # Convert date-only inputs into epoch seconds at local midnight (UTC+8)
+        import re
+        def to_epoch_local(s, end_of_day=False):
+            if not s:
+                return None
+            s = str(s).strip()
+            # accept YYYY-MM-DD or YYYY/MM/DD
+            m = re.match(r'^(\d{4})[\/-](\d{2})[\/-](\d{2})$', s)
+            if m:
+                y = int(m.group(1)); mo = int(m.group(2)); d = int(m.group(3))
+                tz = datetime.timezone(datetime.timedelta(hours=8))
+                if end_of_day:
+                    dt = datetime.datetime(y, mo, d, 23, 59, 59, tzinfo=tz)
+                else:
+                    dt = datetime.datetime(y, mo, d, 0, 0, 0, tzinfo=tz)
+                return int(dt.timestamp())
+            # try epoch seconds integer
             try:
-                dt = datetime.datetime.strptime(args.start, "%Y-%m-%d")
-                dt = dt.replace(tzinfo=datetime.timezone.utc, hour=0, minute=0, second=0)
-                from_time = int(dt.timestamp())
+                return int(s)
             except Exception:
-                try:
-                    from_time = int(args.start)
-                except Exception:
-                    from_time = None
-        if args.end:
+                pass
+            # try ISO parse
             try:
-                dt2 = datetime.datetime.strptime(args.end, "%Y-%m-%d")
-                dt2 = dt2.replace(tzinfo=datetime.timezone.utc, hour=23, minute=59, second=59)
-                to_time = int(dt2.timestamp())
+                ss = s.replace('Z', '+00:00')
+                dt = datetime.datetime.fromisoformat(ss)
+                if dt.tzinfo is None:
+                    # treat naive ISO as UTC
+                    dt = dt.replace(tzinfo=datetime.timezone.utc)
+                return int(dt.timestamp())
             except Exception:
-                try:
-                    to_time = int(args.end)
-                except Exception:
-                    to_time = None
+                return None
+
+        from_time = to_epoch_local(args.start, end_of_day=False)
+        to_time = to_epoch_local(args.end, end_of_day=True)
 
         dbg(f'Calling get_log with from_time={from_time} to_time={to_time} query=__tag__:sn: {args.sn}')
         log_datas = client.get_log(project, logstore,

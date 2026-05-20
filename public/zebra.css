@@ -1,0 +1,15 @@
+/* Zebra striping for event log rows - stronger contrast per request */
+
+#resultsTable tbody tr:nth-child(odd) {
+  background: transparent;
+}
+#resultsTable tbody tr:nth-child(even) {
+  /* stronger teal tint */
+  background: rgba(0, 255, 157, 0.127);
+}
+
+/* Ensure hover remains visible and more pronounced */
+#resultsTable tbody tr:hover { background: rgba(0,255,159,0.10) !important; }
+
+/* Slight divider to give rows clearer separation */
+#resultsTable td { border-bottom: 1px solid rgba(0,0,0,0.24); }
