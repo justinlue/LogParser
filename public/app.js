@@ -64,7 +64,7 @@ queryBtn.addEventListener('click', async () => {
   if (endVal) params.set('end', endVal);
 
   try {
-    const res = await fetch(`/api/query?${params.toString()}`);
+    const res = await fetch(`api/query?${params.toString()}`);
     const json = await res.json();
     if (!res.ok) {
       showError(json.error || `HTTP ${res.status}`);
@@ -104,7 +104,7 @@ parseBtn.addEventListener('click', async () => {
   formData.append('logfile', file);
 
   try {
-    const res  = await fetch('/api/parse', { method: 'POST', body: formData });
+    const res  = await fetch('api/parse', { method: 'POST', body: formData });
     const json = await res.json();
     if (!res.ok) {
       showError(json.error || `HTTP ${res.status}`);
