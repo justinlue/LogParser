@@ -584,6 +584,22 @@ td.col-msg { color: var(--text-b); }
 
 tbody tr { transition: background .1s; }
 
+tbody tr.jump-highlight {
+  background: rgba(0,200,255,.12);
+  box-shadow: inset 3px 0 0 var(--accent3), var(--glow3);
+  animation: jump-pulse 1.2s ease-out;
+}
+
+tbody tr.jump-highlight td.col-num {
+  color: var(--accent3);
+  text-shadow: var(--glow3);
+}
+
+@keyframes jump-pulse {
+  0%   { background: rgba(0,200,255,.45); }
+  100% { background: rgba(0,200,255,.12); }
+}
+
 tbody tr:hover { background: rgba(0,255,159,.035); }
 
 tbody tr:hover td.col-num {

@@ -127,6 +127,25 @@ parseBtn.addEventListener('click', async () => {
 
 let searchDebounceTimer = null;
 
+// `G<number>` is a jump command (e.g. G1104 → scroll to line 1104), not a filter.
+function getJumpLine(value) {
+  const m = /^G(\d+)$/i.exec(value.trim());
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function jumpToLine(lineNum) {
+  render(allRecords);
+  const row = resultsBody.querySelector(`tr[data-line="${lineNum}"]`);
+  if (!row) {
+    showError(`Line ${lineNum} not found (${allRecords.length} records loaded).`);
+    return;
+  }
+  clearError();
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  resultsBody.querySelectorAll('.jump-highlight').forEach(el => el.classList.remove('jump-highlight'));
+  row.classList.add('jump-highlight');
+}
+
 function applyFilter() {
   const q = search.value.trim().toLowerCase();
   if (!q) {
@@ -149,13 +168,20 @@ function applyFilter() {
 
 search.addEventListener('input', () => {
   clearTimeout(searchDebounceTimer);
+  // Defer jump commands to Enter so partial input (G1 → line 1) doesn't fire early.
+  if (getJumpLine(search.value) !== null) return;
   searchDebounceTimer = setTimeout(applyFilter, 300);
 });
 
 search.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     clearTimeout(searchDebounceTimer);
-    applyFilter();
+    const jumpLine = getJumpLine(search.value);
+    if (jumpLine !== null) {
+      jumpToLine(jumpLine);
+    } else {
+      applyFilter();
+    }
   }
 });
 
@@ -210,6 +236,7 @@ function render(records) {
   for (let i = 0; i < records.length; i++) {
     const r  = records[i];
     const tr = document.createElement('tr');
+    tr.dataset.line = String(i + 1);
 
     const tdNum  = document.createElement('td');
     tdNum.className = 'col-num';
