@@ -71,7 +71,7 @@ queryBtn.addEventListener('click', async () => {
       return;
     }
     // expected response: { sn, records }
-    allRecords = json.records || [];
+    allRecords = (json.records || []).map((r, i) => ({ ...r, lineNum: i + 1 }));
     snValue.textContent = json.sn || sn;
     snBanner.hidden = false;
     search.disabled = false;
@@ -110,7 +110,7 @@ parseBtn.addEventListener('click', async () => {
       showError(json.error || `HTTP ${res.status}`);
       return;
     }
-    allRecords = json.records;
+    allRecords = json.records.map((r, i) => ({ ...r, lineNum: i + 1 }));
     snValue.textContent = json.sn;
     snBanner.hidden = false;
     search.disabled = false;
@@ -236,11 +236,11 @@ function render(records) {
   for (let i = 0; i < records.length; i++) {
     const r  = records[i];
     const tr = document.createElement('tr');
-    tr.dataset.line = String(i + 1);
+    tr.dataset.line = String(r.lineNum);
 
     const tdNum  = document.createElement('td');
     tdNum.className = 'col-num';
-    tdNum.textContent = String(i + 1).padStart(4, '0');
+    tdNum.textContent = String(r.lineNum).padStart(4, '0');
 
     const tdTime = document.createElement('td');
     tdTime.className = 'col-time';
