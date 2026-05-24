@@ -659,3 +659,5 @@ tbody tr:hover td.col-num {
   from { top: 0; }
   to   { top: 100vh; }
 }
+
+#resultsBody tr { cursor: pointer; }
