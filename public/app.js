@@ -279,3 +279,11 @@ function clearError() {
   errorMsg.hidden = true;
   errorText.textContent = '';
 }
+
+resultsBody.addEventListener('dblclick', (e) => {
+  const row = e.target.closest('tr[data-line]');
+  if (!row) return;
+  const lineNum = parseInt(row.dataset.line, 10);
+  search.value = '';
+  jumpToLine(lineNum);
+});
