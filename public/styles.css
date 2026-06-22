@@ -24,6 +24,7 @@
   --glow-err:   0 0 7px rgba(255,61,113,.7), 0 0 20px rgba(255,61,113,.25);
   --font-m:     'Share Tech Mono', 'Courier New', monospace;
   --font-d:     'VT323', monospace;
+  --table-fs:   12.5px;
 }
 
 /* ─── Reset ──────────────────────────────────────── */
@@ -495,6 +496,30 @@ input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
   text-align: right;
 }
 
+.zoom-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.zoom-icon {
+  color: var(--text-d);
+  font-size: 13px;
+  letter-spacing: 0;
+  user-select: none;
+}
+
+#zoomSlider {
+  width: 80px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity .2s;
+}
+
+#zoomSlider:hover { opacity: 1; }
+
 /* ─── Data Table ─────────────────────────────────── */
 .data-section { flex: 1; }
 
@@ -516,7 +541,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-family: var(--font-m);
-  font-size: 12.5px;
+  font-size: var(--table-fs);
 }
 
 thead {
@@ -534,7 +559,7 @@ th {
   padding: 11px 14px;
   text-align: left;
   color: var(--accent);
-  font-size: 10.5px;
+  font-size: calc(var(--table-fs) * 0.84);
   letter-spacing: 3px;
   text-shadow: var(--glow);
   font-weight: normal;
@@ -555,7 +580,7 @@ td {
 
 td.col-num {
   color: var(--text-d);
-  font-size: 11px;
+  font-size: calc(var(--table-fs) * 0.88);
   text-align: center;
   width: 54px;
   user-select: none;

@@ -15,6 +15,11 @@ const search     = document.getElementById('search');
 const resultsBody = document.getElementById('resultsBody');
 const recCount   = document.getElementById('recCount');
 const scanLine   = document.getElementById('scanLine');
+const zoomSlider = document.getElementById('zoomSlider');
+
+zoomSlider.addEventListener('input', () => {
+  document.documentElement.style.setProperty('--table-fs', zoomSlider.value + 'px');
+});
 
 let allRecords = [];
 
