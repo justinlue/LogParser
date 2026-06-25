@@ -50,11 +50,12 @@ app.use(express.static('public'));
 // Query params: sn (required), start (optional, YYYY-MM-DD), end (optional, YYYY-MM-DD)
 app.get('/api/query', (req, res) => {
   const sn = req.query.sn;
+  const vin = req.query.vin;
   const start = req.query.start;
   const end = req.query.end;
-  if (!sn) return res.status(400).json({ error: 'missing sn query parameter' });
+  if (!sn && !vin) return res.status(400).json({ error: 'missing sn or vin query parameter' });
   try {
-    const args = ['query.py', '--sn', sn];
+    const args = vin ? ['query.py', '--vin', vin] : ['query.py', '--sn', sn];
     if (start) args.push('--start', start);
     if (end) args.push('--end', end);
     const opts = { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 };
@@ -66,6 +67,7 @@ app.get('/api/query', (req, res) => {
       console.error('Failed to parse python stdout as JSON', e);
       return res.status(500).json({ error: 'invalid response from query.py' });
     }
+    const effectiveSn = (result && result.sn) || sn;
 
     // If python saved the query result to a file, read it and parse
     if (result && result.saved) {
@@ -136,11 +138,11 @@ app.get('/api/query', (req, res) => {
           // save converted CSV to downloads
           const downloadsDir = 'downloads';
           if (!fs.existsSync(downloadsDir)) fs.mkdirSync(downloadsDir, { recursive: true });
-          const savedCsvPath = `${downloadsDir}\\raw_${sn}_converted_${Date.now()}.csv`;
+          const savedCsvPath = `${downloadsDir}\\raw_${effectiveSn}_converted_${Date.now()}.csv`;
           fs.writeFileSync(savedCsvPath, csvText, 'utf8');
           console.log(`Saved converted CSV to ${savedCsvPath}`);
           const buffer = Buffer.from(csvText, 'utf8');
-          const { status, body } = handleParseRequest(`raw_${sn}.csv`, buffer, dictionary);
+          const { status, body } = handleParseRequest(`raw_${effectiveSn}.csv`, buffer, dictionary);
           // include saved path in response for visibility
           if (body && typeof body === 'object') body._saved_csv = savedCsvPath;
           return res.status(status).json(body);
@@ -150,14 +152,14 @@ app.get('/api/query', (req, res) => {
       }
       // treat as raw csv/text
       const buffer = Buffer.from(content, 'utf8');
-      const { status, body } = handleParseRequest(`raw_${sn}.csv`, buffer, dictionary);
+      const { status, body } = handleParseRequest(`raw_${effectiveSn}.csv`, buffer, dictionary);
       return res.status(status).json(body);
     }
 
     // legacy fields
     if (result && result.content) {
       const buffer = Buffer.from(result.content, 'utf8');
-      const { status, body } = handleParseRequest(`raw_${sn}.csv`, buffer, dictionary);
+      const { status, body } = handleParseRequest(`raw_${effectiveSn}.csv`, buffer, dictionary);
       return res.status(status).json(body);
     }
 
@@ -201,14 +203,22 @@ app.get('/api/query', (req, res) => {
       }
       const csvText = datas.map(d => JSON.stringify(d)).join('\n');
       const buffer = Buffer.from(csvText, 'utf8');
-      const { status, body } = handleParseRequest(`raw_${sn}.log`, buffer, dictionary);
+      const { status, body } = handleParseRequest(`raw_${effectiveSn}.log`, buffer, dictionary);
       return res.status(status).json(body);
     }
 
     return res.status(500).json({ error: 'unexpected response from query.py', result });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: err.message, details: err.stderr ? err.stderr.toString() : undefined });
+    let body = { error: err.message };
+    if (err.stdout) {
+      try {
+        const parsed = JSON.parse(err.stdout.toString());
+        if (parsed && parsed.error) body = parsed;
+      } catch (_) { /* stdout was not JSON */ }
+    }
+    if (err.stderr) body.details = err.stderr.toString();
+    return res.status(500).json(body);
   }
 });
 
