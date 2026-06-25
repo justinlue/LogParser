@@ -50,12 +50,17 @@ def mask(s):
 
 def main():
     parser = argparse.ArgumentParser(description='Query logs from Aliyun or fallback to local raw file')
-    parser.add_argument('--sn', required=True, help='device SN, e.g. NSBB22100D59F7B')
+    parser.add_argument('--sn', help='device SN, e.g. NSBB22100D59F7B')
+    parser.add_argument('--vin', help='vehicle VIN (17-char); resolved to SN before searching')
     parser.add_argument('--start', help='start date in YYYY-MM-DD')
     parser.add_argument('--end', help='end date in YYYY-MM-DD')
     args = parser.parse_args()
 
-    dbg(f'Starting query for SN={args.sn} start={args.start} end={args.end}')
+    if bool(args.sn) == bool(args.vin):
+        print(json.dumps({'error': 'provide exactly one of --sn or --vin'}))
+        return 2
+
+    dbg(f'Starting query for sn={args.sn} vin={args.vin} start={args.start} end={args.end}')
 
     cfg = load_webconfig()
     ak = load_accesskey()
@@ -124,11 +129,35 @@ def main():
         from_time = to_epoch_local(args.start, end_of_day=False)
         to_time = to_epoch_local(args.end, end_of_day=True)
 
-        dbg(f'Calling get_log with from_time={from_time} to_time={to_time} query=__tag__:sn: {args.sn}')
+        if args.vin:
+            dbg(f'Resolving SN from VIN={args.vin} (size=1, same window)')
+            lookup = client.get_log(project, logstore,
+                                    from_time=from_time,
+                                    to_time=to_time,
+                                    query=args.vin,
+                                    size=1)
+            resolved_sn = None
+            try:
+                for g in lookup.get_logs():
+                    contents = getattr(g, 'contents', {}) or {}
+                    if contents.get('__tag__:sn'):
+                        resolved_sn = contents.get('__tag__:sn')
+                        break
+            except Exception:
+                dbg('Could not iterate VIN lookup response')
+            if not resolved_sn:
+                dbg('VIN lookup returned no __tag__:sn')
+                print(json.dumps({'error': f'could not resolve SN from VIN {args.vin}'}))
+                return 2
+            dbg(f'Resolved VIN {args.vin} -> SN {resolved_sn}')
+        else:
+            resolved_sn = args.sn
+
+        dbg(f'Calling get_log with from_time={from_time} to_time={to_time} query=__tag__:sn: {resolved_sn}')
         log_datas = client.get_log(project, logstore,
                                    from_time=from_time,
                                    to_time=to_time,
-                                   query='__tag__:sn: '+args.sn,
+                                   query='__tag__:sn: '+resolved_sn,
                                    size=-1)
         dbg('get_log returned')
 
@@ -148,17 +177,17 @@ def main():
                 pass
         dbg(f'Compiled datas count={len(log_datas_list)} total_size_estimate={nums}')
 
-        log_datas_info = {'datas': log_datas_list, 'count': getattr(log_datas, 'get_count', lambda: None)(), 'total_size': nums}
+        log_datas_info = {'datas': log_datas_list, 'count': getattr(log_datas, 'get_count', lambda: None)(), 'total_size': nums, 'sn': resolved_sn}
         # save result to downloads dir
         downloads = os.path.join(HERE, 'downloads')
         os.makedirs(downloads, exist_ok=True)
-        out_fname = os.path.join(downloads, 'raw_{}_{}.json'.format(args.sn, int(time.time())))
+        out_fname = os.path.join(downloads, 'raw_{}_{}.json'.format(resolved_sn, int(time.time())))
         try:
             with open(out_fname, 'w', encoding='utf8') as fo:
                 json.dump(log_datas_info, fo)
             dbg(f'Saved query result to {out_fname}')
             # print saved path as JSON to stdout for the caller
-            print(json.dumps({'saved': os.path.abspath(out_fname)}))
+            print(json.dumps({'saved': os.path.abspath(out_fname), 'sn': resolved_sn}))
             sys.stdout.flush()
             dbg('Printed saved path to stdout')
             return 0
@@ -173,10 +202,10 @@ def main():
     except Exception as exc:  # fallback when SDK missing or query fails
         dbg('Exception during aliyun query: ' + str(exc))
         dbg(traceback.format_exc())
-        # Try to find a local raw CSV named raw_<SN>.csv
-        fname = os.path.join(HERE, f'raw_{args.sn}.csv')
+        # Try to find a local raw CSV named raw_<SN>.csv (SN path only; a VIN has no such file)
+        fname = os.path.join(HERE, f'raw_{args.sn}.csv') if args.sn else None
         dbg(f'Looking for local fallback file: {fname}')
-        if os.path.exists(fname):
+        if fname and os.path.exists(fname):
             dbg('Found local fallback file, returning content')
             with open(fname, 'r', encoding='utf8') as f:
                 content = f.read()
