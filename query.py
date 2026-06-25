@@ -202,10 +202,10 @@ def main():
     except Exception as exc:  # fallback when SDK missing or query fails
         dbg('Exception during aliyun query: ' + str(exc))
         dbg(traceback.format_exc())
-        # Try to find a local raw CSV named raw_<SN>.csv
-        fname = os.path.join(HERE, f'raw_{args.sn}.csv')
+        # Try to find a local raw CSV named raw_<SN>.csv (SN path only; a VIN has no such file)
+        fname = os.path.join(HERE, f'raw_{args.sn}.csv') if args.sn else None
         dbg(f'Looking for local fallback file: {fname}')
-        if os.path.exists(fname):
+        if fname and os.path.exists(fname):
             dbg('Found local fallback file, returning content')
             with open(fname, 'r', encoding='utf8') as f:
                 content = f.read()

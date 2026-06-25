@@ -47,7 +47,7 @@ const upload = multer({
 app.use(express.static('public'));
 
 // New endpoint: fetch logs from Aliyun using local query.py helper.
-// Query params: sn (required), start (optional, YYYY-MM-DD), end (optional, YYYY-MM-DD)
+// Query params: sn or vin (exactly one required), start (optional, YYYY-MM-DD), end (optional, YYYY-MM-DD)
 app.get('/api/query', (req, res) => {
   const sn = req.query.sn;
   const vin = req.query.vin;
