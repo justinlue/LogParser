@@ -4,6 +4,7 @@ const btnLabel   = document.getElementById('btnLabel');
 const queryBtn   = document.getElementById('queryBtn');
 const queryLabel = document.getElementById('queryLabel');
 const snInput    = document.getElementById('snInput');
+const vinInput   = document.getElementById('vinInput');
 const startInput = document.getElementById('startInput');
 const endInput   = document.getElementById('endInput');
 const errorMsg   = document.getElementById('errorMsg');
@@ -45,8 +46,9 @@ fileInput.addEventListener('change', () => {
 // Remote fetch button: query by sn and optional date range
 queryBtn.addEventListener('click', async () => {
   const sn = (snInput.value || '').trim();
-  if (!sn) {
-    showError('Please enter device SN (e.g. NSBB22100D59F7B)');
+  const vin = (vinInput.value || '').trim();
+  if (!sn && !vin) {
+    showError('Please enter a device SN or a VIN');
     return;
   }
 
@@ -58,7 +60,8 @@ queryBtn.addEventListener('click', async () => {
   recCount.textContent = '';
 
   const params = new URLSearchParams();
-  params.set('sn', sn);
+  if (vin) params.set('vin', vin);
+  else params.set('sn', sn);
   let endVal = endInput.value;
   if (startInput.value && endVal && startInput.value === endVal) {
     const d = new Date(endVal + 'T00:00:00Z');
