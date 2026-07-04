@@ -339,3 +339,136 @@ resultsBody.addEventListener('dblclick', (e) => {
   search.value = '';
   jumpToLine(lineNum);
 });
+
+// --- SN/VIN history combo dropdown behavior ------------------------------
+function closeAllCombos() {
+  document.querySelectorAll('.combo.open').forEach(c => {
+    c.classList.remove('open');
+    c.querySelector('.combo-list').hidden = true;
+  });
+}
+
+function setupCombo(combo) {
+  const input  = combo.querySelector('input');
+  const toggle = combo.querySelector('.combo-toggle');
+  const listEl = combo.querySelector('.combo-list');
+  const key    = combo.dataset.history === 'vin' ? HIST_VIN : HIST_SN;
+  let activeIndex = -1;
+
+  const options = () => Array.from(listEl.querySelectorAll('.combo-option'));
+  const isOpen  = () => !listEl.hidden;
+
+  function renderList() {
+    const all    = history.list(key);
+    const filter = input.value.trim().toLowerCase();
+    const items  = all.filter(v => v.toLowerCase().includes(filter));
+    listEl.innerHTML = '';
+    activeIndex = -1;
+
+    if (all.length === 0 || items.length === 0) {
+      const li = document.createElement('li');
+      li.className = 'combo-empty';
+      li.textContent = all.length === 0 ? 'NO HISTORY' : 'NO MATCH';
+      listEl.appendChild(li);
+      return;
+    }
+
+    items.forEach(value => {
+      const li = document.createElement('li');
+      li.className = 'combo-option';
+      li.setAttribute('role', 'option');
+
+      const label = document.createElement('span');
+      label.className = 'val';
+      label.textContent = value;
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'del';
+      del.textContent = '×';
+      del.setAttribute('aria-label', 'Remove ' + value);
+
+      li.append(label, del);
+      listEl.appendChild(li);
+
+      // mousedown (not click) so the input never blurs/closes before we act
+      label.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectValue(value);
+      });
+      del.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        history.remove(key, value);
+        renderList();
+      });
+    });
+  }
+
+  function open() {
+    closeAllCombos();
+    renderList();
+    combo.classList.add('open');
+    listEl.hidden = false;
+  }
+
+  function close() {
+    combo.classList.remove('open');
+    listEl.hidden = true;
+    activeIndex = -1;
+  }
+
+  function selectValue(value) {
+    input.value = value;
+    close();
+    input.focus();
+  }
+
+  function setActive(idx) {
+    const opts = options();
+    if (opts.length === 0) return;
+    activeIndex = (idx + opts.length) % opts.length;
+    opts.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+    opts[activeIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  toggle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    if (isOpen()) close();
+    else { open(); input.focus(); }
+  });
+
+  input.addEventListener('focus', open);
+  input.addEventListener('click', () => { if (!isOpen()) open(); });
+  input.addEventListener('input', () => { if (!isOpen()) open(); else renderList(); });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      if (!isOpen()) { open(); return; }
+      e.preventDefault();
+      setActive(activeIndex + 1);
+    } else if (e.key === 'ArrowUp') {
+      if (!isOpen()) return;
+      e.preventDefault();
+      setActive(activeIndex - 1);
+    } else if (e.key === 'Enter') {
+      const opts = options();
+      if (isOpen() && activeIndex >= 0 && opts[activeIndex]) {
+        e.preventDefault();
+        selectValue(opts[activeIndex].querySelector('.val').textContent);
+      } else {
+        close();
+      }
+    } else if (e.key === 'Escape') {
+      if (isOpen()) { e.preventDefault(); close(); }
+    }
+  });
+}
+
+function initCombos() {
+  document.querySelectorAll('.combo').forEach(setupCombo);
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.combo')) closeAllCombos();
+  });
+}
+initCombos();
