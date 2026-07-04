@@ -35,8 +35,16 @@
       <section class="module">
         <div class="module-label">▸ REMOTE_FETCH</div>
         <div class="fetch-area">
-          <input id="snInput" placeholder="SN e.g. NSBB22100D59F7B" aria-label="Device SN">
-          <input id="vinInput" placeholder="VIN e.g. LSV2BDDG6SN016885" aria-label="Vehicle VIN">
+          <div class="combo" data-history="sn">
+            <input id="snInput" placeholder="SN e.g. NSBB22100D59F7B" aria-label="Device SN" autocomplete="off">
+            <button type="button" class="combo-toggle" aria-label="Show SN history" tabindex="-1">▼</button>
+            <ul class="combo-list" role="listbox" hidden></ul>
+          </div>
+          <div class="combo" data-history="vin">
+            <input id="vinInput" placeholder="VIN e.g. LSV2BDDG6SN016885" aria-label="Vehicle VIN" autocomplete="off">
+            <button type="button" class="combo-toggle" aria-label="Show VIN history" tabindex="-1">▼</button>
+            <ul class="combo-list" role="listbox" hidden></ul>
+          </div>
           <input type="date" id="startInput" aria-label="Start date (YYYY-MM-DD)">
           <input type="date" id="endInput" aria-label="End date (YYYY-MM-DD)">
           <button id="queryBtn">

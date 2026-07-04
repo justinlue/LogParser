@@ -232,6 +232,100 @@ body.parsing .scan-line {
   opacity: 0.6;
 }
 
+/* --- SN/VIN history combo dropdowns ------------------------------------- */
+.combo {
+  position: relative;
+  display: flex;
+}
+.combo[data-history="sn"]  { flex: 1; }
+.combo[data-history="vin"] { width: 220px; }
+
+.fetch-area .combo input {
+  width: 100%;
+  padding-right: 30px;   /* room for the chevron */
+}
+
+.combo-toggle {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  bottom: 1px;
+  width: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-d);
+  font-family: var(--font-m);
+  font-size: 10px;
+  cursor: pointer;
+  transition: transform .2s, color .2s;
+}
+.combo-toggle:hover { color: var(--accent3); }
+.combo.open .combo-toggle { transform: rotate(180deg); color: var(--accent3); }
+
+.combo-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  box-shadow: 0 0 16px rgba(0,200,255,.15);
+  z-index: 20;
+}
+.combo-list[hidden] { display: none; }
+
+.combo-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  font-family: var(--font-m);
+  font-size: 12.5px;
+  letter-spacing: 1px;
+  color: var(--text-b);
+  cursor: pointer;
+}
+.combo-option:hover,
+.combo-option.active {
+  background: rgba(0,200,255,.10);
+  color: var(--accent3);
+}
+.combo-option .val {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.combo-option .del {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  color: var(--text-d);
+  font-family: var(--font-m);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.combo-option .del:hover { color: var(--err); }
+
+.combo-empty {
+  padding: 6px 12px;
+  font-family: var(--font-m);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--text-d);
+  cursor: default;
+}
+
 #queryBtn {
   background: transparent;
   border: 1px solid var(--accent3);
