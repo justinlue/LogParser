@@ -127,6 +127,8 @@ queryBtn.addEventListener('click', async () => {
     search.disabled = false;
     render(allRecords);
     clearError();
+    if (vin) history.add(HIST_VIN, vin);
+    else     history.add(HIST_SN, sn);
   } catch (err) {
     showError(err.message);
   } finally {
