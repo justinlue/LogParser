@@ -450,7 +450,9 @@ function setupCombo(combo) {
     } else if (e.key === 'ArrowUp') {
       if (!isOpen()) return;
       e.preventDefault();
-      setActive(activeIndex - 1);
+      const opts = options();
+      if (opts.length === 0) return;
+      setActive(activeIndex <= 0 ? opts.length - 1 : activeIndex - 1);
     } else if (e.key === 'Enter') {
       const opts = options();
       if (isOpen() && activeIndex >= 0 && opts[activeIndex]) {
