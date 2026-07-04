@@ -18,6 +18,48 @@ const recCount   = document.getElementById('recCount');
 const scanLine   = document.getElementById('scanLine');
 const zoomSlider = document.getElementById('zoomSlider');
 
+// --- Search history (SN / VIN) -------------------------------------------
+const HIST_SN  = 'logparse.history.sn';
+const HIST_VIN = 'logparse.history.vin';
+
+const history = {
+  MAX: 50,
+  load(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.filter(v => typeof v === 'string') : [];
+    } catch {
+      return [];
+    }
+  },
+  save(key, arr) {
+    try {
+      localStorage.setItem(key, JSON.stringify(arr.slice(0, this.MAX)));
+    } catch {
+      /* storage unavailable or full — ignore */
+    }
+  },
+  add(key, value) {
+    const v = (value || '').trim();
+    if (!v) return this.load(key);
+    const arr = this.load(key).filter(x => x !== v);
+    arr.unshift(v);
+    const capped = arr.slice(0, this.MAX);
+    this.save(key, capped);
+    return capped;
+  },
+  remove(key, value) {
+    const arr = this.load(key).filter(x => x !== value);
+    this.save(key, arr);
+    return arr;
+  },
+  list(key) {
+    return this.load(key);
+  },
+};
+
 zoomSlider.addEventListener('input', () => {
   document.documentElement.style.setProperty('--table-fs', zoomSlider.value + 'px');
 });
