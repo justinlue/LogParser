@@ -207,6 +207,11 @@ function applyFilter() {
   const terms = q.split(',').map(t => t.trim()).filter(t => t.length > 0);
   const filtered = allRecords.filter(r =>
     terms.some(t => {
+      // A number wrapped in quotes ("259", “259”) searches the message only.
+      const unquoted = t.replace(/^["“”]+|["“”]+$/g, '');
+      if (unquoted !== t && /^\d+$/.test(unquoted)) {
+        return r.message.toLowerCase().includes(unquoted);
+      }
       if (/^\d+$/.test(t)) return String(r.eventId).includes(t);
       return (
         r.time.toLowerCase().includes(t) ||
