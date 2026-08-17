@@ -5,6 +5,7 @@ const queryBtn   = document.getElementById('queryBtn');
 const queryLabel = document.getElementById('queryLabel');
 const snInput    = document.getElementById('snInput');
 const vinInput   = document.getElementById('vinInput');
+const sourceSelect = document.getElementById('sourceSelect');
 const startInput = document.getElementById('startInput');
 const endInput   = document.getElementById('endInput');
 const errorMsg   = document.getElementById('errorMsg');
@@ -104,6 +105,8 @@ queryBtn.addEventListener('click', async () => {
   const params = new URLSearchParams();
   if (vin) params.set('vin', vin);
   else params.set('sn', sn);
+  const source = (sourceSelect.value || 'both').trim();
+  if (source && source !== 'both') params.set('source', source);
   let endVal = endInput.value;
   if (startInput.value && endVal && startInput.value === endVal) {
     const d = new Date(endVal + 'T00:00:00Z');

@@ -45,6 +45,11 @@
             <button type="button" class="combo-toggle" aria-label="Show VIN history" tabindex="-1">▼</button>
             <ul class="combo-list" role="listbox" hidden></ul>
           </div>
+          <select id="sourceSelect" aria-label="Data source" title="Cloud data source">
+            <option value="both" selected>BOTH</option>
+            <option value="aliyun">ALIYUN</option>
+            <option value="tencent">TENCENT</option>
+          </select>
           <input type="date" id="startInput" aria-label="Start date (YYYY-MM-DD)">
           <input type="date" id="endInput" aria-label="End date (YYYY-MM-DD)">
           <button id="queryBtn">

@@ -27,7 +27,9 @@ function detectPython() {
   }
   throw new Error('Python not found. Please install Python and ensure it is in your PATH.');
 }
-const PYTHON = detectPython();
+
+const PYTHON = "python.exe"
+// const PYTHON = detectPython();
 console.log(`Using Python executable: ${PYTHON}`);
 
 const app = express();
@@ -46,18 +48,21 @@ const upload = multer({
 
 app.use(express.static('public'));
 
-// New endpoint: fetch logs from Aliyun using local query.py helper.
-// Query params: sn or vin (exactly one required), start (optional, YYYY-MM-DD), end (optional, YYYY-MM-DD)
+// New endpoint: fetch logs from Aliyun SLS and/or Tencent CLS via local query.py helper.
+// Query params: sn or vin (exactly one required), start (optional, YYYY-MM-DD),
+// end (optional, YYYY-MM-DD), source (optional: aliyun | tencent | both, default both)
 app.get('/api/query', (req, res) => {
   const sn = req.query.sn;
   const vin = req.query.vin;
   const start = req.query.start;
   const end = req.query.end;
+  const source = req.query.source;
   if (!sn && !vin) return res.status(400).json({ error: 'missing sn or vin query parameter' });
   try {
     const args = vin ? ['query.py', '--vin', vin] : ['query.py', '--sn', sn];
     if (start) args.push('--start', start);
     if (end) args.push('--end', end);
+    if (source) args.push('--source', source);
     const opts = { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 };
     const out = execFileSync(PYTHON, args, opts);
     let result;

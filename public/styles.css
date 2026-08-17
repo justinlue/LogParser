@@ -219,6 +219,26 @@ body.parsing .scan-line {
 #snInput { flex: 1; }
 #snInput::placeholder { color: var(--text-d); }
 
+#sourceSelect {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text-b);
+  font-family: var(--font-m);
+  font-size: 12.5px;
+  letter-spacing: 1px;
+  padding: 9px 14px;
+  outline: none;
+  cursor: pointer;
+  width: 118px;
+  color-scheme: dark;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+#sourceSelect:focus {
+  border-color: var(--accent3);
+  box-shadow: 0 0 16px rgba(0,200,255,.15);
+}
+
 #startInput,
 #endInput {
   width: 148px;
