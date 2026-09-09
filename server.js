@@ -28,8 +28,8 @@ function detectPython() {
   throw new Error('Python not found. Please install Python and ensure it is in your PATH.');
 }
 
-const PYTHON = "python.exe"
-// const PYTHON = detectPython();
+// const PYTHON = "python.exe"
+const PYTHON = detectPython();
 console.log(`Using Python executable: ${PYTHON}`);
 
 const app = express();
