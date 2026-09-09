@@ -606,8 +606,19 @@ input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
   color: var(--text-d);
   letter-spacing: 1.5px;
   white-space: nowrap;
-  min-width: 170px;
+  min-width: 215px;
   text-align: right;
+  transition: color .15s ease;
+}
+
+.rec-count.filtering {
+  color: var(--accent);
+  text-shadow: var(--glow);
+}
+
+.rec-count.no-match {
+  color: var(--err);
+  text-shadow: var(--glow-err);
 }
 
 .zoom-wrap {

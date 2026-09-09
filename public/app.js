@@ -100,7 +100,7 @@ queryBtn.addEventListener('click', async () => {
   document.body.classList.add('parsing');
   errorMsg.hidden = true;
   snBanner.hidden = true;
-  recCount.textContent = '';
+  clearRecCount();
 
   const params = new URLSearchParams();
   if (vin) params.set('vin', vin);
@@ -153,7 +153,7 @@ parseBtn.addEventListener('click', async () => {
   document.body.classList.add('parsing');
   errorMsg.hidden = true;
   snBanner.hidden = true;
-  recCount.textContent = '';
+  clearRecCount();
 
   const formData = new FormData();
   formData.append('logfile', file);
@@ -289,6 +289,30 @@ function buildVehicleStatusCell(msg, lastParsed) {
   return td;
 }
 
+// The count doubles as the filter indicator: the `x / y` form appears only
+// while a filter is narrowing the table. A `G<n>` jump renders every record,
+// so it reads as unfiltered.
+function updateRecCount(shown) {
+  const q = search.value.trim();
+  const filtering = q.length > 0 && getJumpLine(q) === null;
+  const total = allRecords.length;
+
+  if (!filtering) {
+    recCount.textContent = `${total} RECORDS`;
+  } else if (shown === 0) {
+    recCount.textContent = `NO MATCH 0 / ${total} RECORDS`;
+  } else {
+    recCount.textContent = `MATCHED ${shown} / ${total} RECORDS`;
+  }
+  recCount.classList.toggle('filtering', filtering && shown > 0);
+  recCount.classList.toggle('no-match', filtering && shown === 0);
+}
+
+function clearRecCount() {
+  recCount.textContent = '';
+  recCount.classList.remove('filtering', 'no-match');
+}
+
 function render(records) {
   const fragment = document.createDocumentFragment();
   let lastVehicleStatus = null;
@@ -327,7 +351,7 @@ function render(records) {
   resultsBody.innerHTML = '';
   resultsBody.appendChild(fragment);
 
-  recCount.textContent = `${records.length} / ${allRecords.length} RECORDS`;
+  updateRecCount(records.length);
 }
 
 function showError(msg) {
