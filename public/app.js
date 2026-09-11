@@ -289,6 +289,51 @@ function buildVehicleStatusCell(msg, lastParsed) {
   return td;
 }
 
+// Events whose message is a filled-in `%d` template with no uniform separator
+// (2152 has none: "intelligence en 1 peps en 0 ..."). Each number is a field;
+// its label is the text before it, back to the nearest comma.
+const NUMERIC_DIFF_EVENTS = new Set([1380, 2152]);
+
+function splitNumericFields(msg) {
+  const fields = [];
+  const re = /-?\d+/g;
+  let last = 0;
+  let m;
+  while ((m = re.exec(msg)) !== null) {
+    const chunk = msg.slice(last, m.index);
+    const cut = Math.max(chunk.lastIndexOf(','), chunk.lastIndexOf(';')) + 1;
+    const labelStart = cut + (chunk.slice(cut).match(/^\s*/)[0].length);
+    fields.push({
+      prefix: chunk.slice(0, labelStart),
+      label: chunk.slice(labelStart),
+      value: m[0],
+    });
+    last = re.lastIndex;
+  }
+  return { fields, tail: msg.slice(last) };
+}
+
+function buildNumericDiffCell({ fields, tail }, lastFields) {
+  const td = document.createElement('td');
+  td.className = 'col-msg';
+  fields.forEach((f, i) => {
+    td.appendChild(document.createTextNode(f.prefix));
+    const text = f.label + f.value;
+    const prev = lastFields !== null ? lastFields[i] : undefined;
+    const changed = prev !== undefined && prev.label === f.label && prev.value !== f.value;
+    if (changed) {
+      const span = document.createElement('span');
+      span.className = 'changed-field';
+      span.textContent = text;
+      td.appendChild(span);
+    } else {
+      td.appendChild(document.createTextNode(text));
+    }
+  });
+  td.appendChild(document.createTextNode(tail));
+  return td;
+}
+
 // The count doubles as the filter indicator: the `x / y` form appears only
 // while a filter is narrowing the table. A `G<n>` jump renders every record,
 // so it reads as unfiltered.
@@ -316,6 +361,7 @@ function clearRecCount() {
 function render(records) {
   const fragment = document.createDocumentFragment();
   let lastVehicleStatus = null;
+  const lastFieldsByEvent = new Map();
 
   for (let i = 0; i < records.length; i++) {
     const r  = records[i];
@@ -339,6 +385,10 @@ function render(records) {
       const parsed = parseVehicleStatusMessage(r.message);
       tdMsg = buildVehicleStatusCell(r.message, lastVehicleStatus);
       lastVehicleStatus = parsed;
+    } else if (NUMERIC_DIFF_EVENTS.has(r.eventId)) {
+      const split = splitNumericFields(r.message);
+      tdMsg = buildNumericDiffCell(split, lastFieldsByEvent.get(r.eventId) || null);
+      lastFieldsByEvent.set(r.eventId, split.fields);
     } else {
       tdMsg = document.createElement('td');
       tdMsg.className = 'col-msg';

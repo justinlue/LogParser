@@ -35,7 +35,7 @@ uploaded buffer → handleParseRequest (routes.js)
 - `src/routes.js` — pure function `handleParseRequest(filename, buffer, dictionary) → { status, body }`. No Express coupling; independently testable.
 - `server.js` — Express bootstrap: loads dictionary, mounts multer (5 MB limit, `memoryStorage`), serves `public/` as static, handles `POST /api/parse` and `GET /api/query`, includes an error middleware for `LIMIT_FILE_SIZE → 413`.
 
-**Frontend** (`public/`) — vanilla HTML/CSS/JS, no framework or bundler. `app.js` POSTs to `/api/parse`, receives `{ sn, records }`, shows a device SN banner, populates a monospace table, and filters rows live on search input. The REMOTE_FETCH panel also GETs `/api/query` to pull logs from Aliyun without a local file.
+**Frontend** (`public/`) — vanilla HTML/CSS/JS, no framework or bundler. `app.js` POSTs to `/api/parse`, receives `{ sn, records }`, shows a device SN banner, populates a monospace table, and filters rows live on search input. Rows for events 3025 (`key: value;` pairs) and 1380/2152 (`%d` templates, split on numbers via `NUMERIC_DIFF_EVENTS`) highlight fields whose value differs from the previous rendered row of the same event ID (`.changed-field`). The REMOTE_FETCH panel also GETs `/api/query` to pull logs from Aliyun without a local file.
 
 ## Key Data Contracts
 
