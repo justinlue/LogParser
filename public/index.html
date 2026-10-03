@@ -56,10 +56,14 @@
             <span class="btn-arrow">⤓</span>
             <span id="queryLabel">FETCH</span>
           </button>
+          <button type="button" id="uploadToggle" aria-expanded="false" aria-controls="uploadModule" title="Parse a local log file">
+            <span class="file-icon">◈</span>
+            <span>FILE</span>
+          </button>
         </div>
       </section>
 
-      <section class="module">
+      <section class="module" id="uploadModule" hidden>
         <div class="module-label">▸ INPUT_STREAM</div>
         <div class="upload-area">
           <label class="file-drop" for="fileInput">

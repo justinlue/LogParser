@@ -396,6 +396,34 @@ body.parsing .scan-line {
 /* ─── Upload ─────────────────────────────────────── */
 .module { margin-bottom: 8px; }
 
+/* INPUT_STREAM is collapsed by default; this reveals it */
+#uploadToggle {
+  background: transparent;
+  border: 1px dashed var(--accent-d);
+  color: var(--text);
+  padding: 0 14px;
+  font-family: var(--font-m);
+  font-size: 12px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: border-color .2s, color .2s, box-shadow .2s;
+}
+
+#uploadToggle .file-icon { font-size: 14px; }
+
+#uploadToggle:hover,
+#uploadToggle[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 14px rgba(0,255,159,.15);
+}
+
+#uploadToggle[aria-expanded="true"] { border-style: solid; }
+
 .upload-area {
   display: flex;
   gap: 10px;
@@ -651,11 +679,16 @@ input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
 .table-wrap {
   border: 1px solid var(--border);
   overflow: auto;
-  max-height: calc(100vh - 320px);
+  max-height: calc(100vh - 250px);
   min-height: 160px;
   background: var(--bg);
   scrollbar-width: thin;
   scrollbar-color: var(--accent-d) var(--bg2);
+}
+
+/* give the space back while INPUT_STREAM is revealed */
+#uploadModule:not([hidden]) ~ .data-section .table-wrap {
+  max-height: calc(100vh - 320px);
 }
 
 .table-wrap::-webkit-scrollbar        { width: 6px; height: 6px; }

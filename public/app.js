@@ -78,6 +78,14 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 
+// INPUT_STREAM (local file upload) is rarely used: collapsed until toggled
+const uploadToggle = document.getElementById('uploadToggle');
+const uploadModule = document.getElementById('uploadModule');
+uploadToggle.addEventListener('click', () => {
+  uploadModule.hidden = !uploadModule.hidden;
+  uploadToggle.setAttribute('aria-expanded', String(!uploadModule.hidden));
+});
+
 // Show chosen filename in the drop zone
 fileInput.addEventListener('change', () => {
   const f = fileInput.files[0];
