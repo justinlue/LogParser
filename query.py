@@ -11,7 +11,6 @@ import os
 import csv
 import sys
 import traceback
-import time
 import datetime
 import re
 
@@ -398,7 +397,8 @@ def main():
 
     downloads = os.path.join(HERE, 'downloads')
     os.makedirs(downloads, exist_ok=True)
-    out_fname = os.path.join(downloads, 'raw_{}_{}.json'.format(resolved_sn, int(time.time())))
+    # one file per SN (VIN queries land on their resolved SN): re-fetching overwrites
+    out_fname = os.path.join(downloads, 'raw_{}.json'.format(resolved_sn))
     try:
         with open(out_fname, 'w', encoding='utf8') as fo:
             json.dump(result, fo)

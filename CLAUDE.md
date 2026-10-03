@@ -52,14 +52,14 @@ The REMOTE_FETCH panel queries Aliyun SLS without requiring a local file upload.
 - `sn` — required; 15-char alphanumeric device serial number
 - `start` / `end` — optional date range (inclusive). When omitted the server fetches all available logs.
 
-**How it works:** `server.js` spawns `query.py` via `execFileSync`, passing `--sn`, `--start`, and `--end`. `query.py` authenticates with Aliyun SLS and returns a JSON object. The server converts the structured response to CSV, runs it through `handleParseRequest`, saves a copy to `downloads/raw_<sn>_converted_<ts>.csv`, and returns `{ sn, records }` in the same shape as `/api/parse`.
+**How it works:** `server.js` spawns `query.py` via `execFileSync`, passing `--sn`, `--start`, and `--end`. `query.py` authenticates with Aliyun SLS and returns a JSON object. The server converts the structured response to CSV, runs it through `handleParseRequest`, saves a copy to `downloads/raw_<sn>_converted.csv` (via `src/downloads.js`), and returns `{ sn, records }` in the same shape as `/api/parse`.
 
 **Environment:**
 - `TIMEZONE_OFFSET_HOURS` — integer hours to shift timestamps (e.g. `8` for CST). Defaults to `0` (UTC) if unset.
 
 **Same-day date behaviour:** When the user enters the same date for both from and to, the frontend automatically adds one day to the end date before sending the request. This compensates for the remote server always starting from `00:00:00` of that day, which would otherwise return an empty range.
 
-**`downloads/`** — created automatically on first fetch; stores intermediate converted CSV files for debugging.
+**`downloads/`** — created automatically on first fetch; stores the raw query result (`raw_<sn>.json`, written by `query.py`) and the converted CSV (`raw_<sn>_converted.csv`) for debugging. The SN is the unique identifier: there is one pair of files per device, a re-fetch overwrites them, and VIN queries are saved under the SN the VIN resolves to.
 
 ## Dictionary Updates
 
@@ -72,4 +72,5 @@ Tests use Node's built-in `node:test` — zero extra dependencies. Coverage per 
 - `parser.test.js` — field extraction, blank/short line skipping, CRLF handling
 - `formatter.test.js` — all four `paramType` branches, edge cases (too few/many params, invalid timestamp, non-numeric int param)
 - `sn.test.js` — valid `.txt`/`.log`, rejects wrong prefix, wrong extension, non-15-char SN, non-alphanumeric
+- `downloads.test.js` — same-SN save overwrites, one file per SN, directory creation
 - `routes.test.js` — end-to-end pipeline through `handleParseRequest` without Express

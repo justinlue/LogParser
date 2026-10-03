@@ -3,6 +3,7 @@ import multer from 'multer';
 import { loadDictionary } from './src/dictionary.js';
 import { handleParseRequest } from './src/routes.js';
 import { setTimezoneOffsetHours } from './src/formatter.js';
+import { saveConvertedCsv } from './src/downloads.js';
 import { execFileSync, execSync } from 'child_process';
 import fs from 'fs';
 
@@ -141,10 +142,7 @@ app.get('/api/query', (req, res) => {
           }).join('\n');
           const csvText = header + '\n' + rows;
           // save converted CSV to downloads
-          const downloadsDir = 'downloads';
-          if (!fs.existsSync(downloadsDir)) fs.mkdirSync(downloadsDir, { recursive: true });
-          const savedCsvPath = `${downloadsDir}\\raw_${effectiveSn}_converted_${Date.now()}.csv`;
-          fs.writeFileSync(savedCsvPath, csvText, 'utf8');
+          const savedCsvPath = saveConvertedCsv('downloads', effectiveSn, csvText);
           console.log(`Saved converted CSV to ${savedCsvPath}`);
           const buffer = Buffer.from(csvText, 'utf8');
           const { status, body } = handleParseRequest(`raw_${effectiveSn}.csv`, buffer, dictionary);
