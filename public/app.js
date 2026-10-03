@@ -67,6 +67,28 @@ zoomSlider.addEventListener('input', () => {
 
 let allRecords = [];
 
+// --- User line marks -------------------------------------------------------
+// Line numbers the user highlighted by clicking the # cell. Kept apart from the
+// DOM so marks survive filter/jump re-renders; reset when new logs are loaded.
+const clearMarksBtn   = document.getElementById('clearMarksBtn');
+const clearMarksLabel = document.getElementById('clearMarksLabel');
+const markedLines = new Set();
+
+function updateMarksUi() {
+  clearMarksBtn.disabled = markedLines.size === 0;
+  clearMarksLabel.textContent = markedLines.size
+    ? `CLEAR MARKS (${markedLines.size})`
+    : 'CLEAR MARKS';
+}
+
+function clearMarks() {
+  markedLines.clear();
+  resultsBody.querySelectorAll('tr.marked').forEach(tr => tr.classList.remove('marked'));
+  updateMarksUi();
+}
+
+clearMarksBtn.addEventListener('click', clearMarks);
+
 // Live UTC clock
 function updateClock() {
   const t = new Date().toISOString().slice(11, 19);
@@ -136,6 +158,7 @@ queryBtn.addEventListener('click', async () => {
     snValue.textContent = json.sn || sn;
     snBanner.hidden = false;
     search.disabled = false;
+    clearMarks();
     render(allRecords);
     clearError();
     if (vin) history.add(HIST_VIN, vin);
@@ -177,6 +200,7 @@ parseBtn.addEventListener('click', async () => {
     snValue.textContent = json.sn;
     snBanner.hidden = false;
     search.disabled = false;
+    clearMarks();
     render(allRecords);
     clearError();
   } catch (err) {
@@ -375,6 +399,7 @@ function render(records) {
     const r  = records[i];
     const tr = document.createElement('tr');
     tr.dataset.line = String(r.lineNum);
+    if (markedLines.has(r.lineNum)) tr.classList.add('marked');
 
     const tdNum  = document.createElement('td');
     tdNum.className = 'col-num';
@@ -422,7 +447,21 @@ function clearError() {
   errorText.textContent = '';
 }
 
+// Click a line number to toggle that line's highlight.
+resultsBody.addEventListener('click', (e) => {
+  const cell = e.target.closest('td.col-num');
+  if (!cell) return;
+  const row = cell.parentElement;
+  const lineNum = parseInt(row.dataset.line, 10);
+  if (markedLines.has(lineNum)) markedLines.delete(lineNum);
+  else markedLines.add(lineNum);
+  row.classList.toggle('marked', markedLines.has(lineNum));
+  updateMarksUi();
+});
+
 resultsBody.addEventListener('dblclick', (e) => {
+  // the # cell is the mark toggle; a fast double toggle must not also jump
+  if (e.target.closest('td.col-num')) return;
   const row = e.target.closest('tr[data-line]');
   if (!row) return;
   const lineNum = parseInt(row.dataset.line, 10);

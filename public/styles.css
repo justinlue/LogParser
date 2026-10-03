@@ -18,6 +18,7 @@
   --text-d:     #2e4558;
   --border:     #112030;
   --err:        #ff3d71;
+  --mark:       #ff9500;
   --glow:       0 0 7px rgba(0,255,159,.7), 0 0 20px rgba(0,255,159,.25);
   --glow2:      0 0 7px rgba(255,0,110,.7),  0 0 20px rgba(255,0,110,.25);
   --glow3:      0 0 7px rgba(0,200,255,.7),  0 0 20px rgba(0,200,255,.25);
@@ -649,6 +650,34 @@ input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
   text-shadow: var(--glow-err);
 }
 
+#clearMarksBtn {
+  background: transparent;
+  border: 1px solid var(--mark);
+  color: var(--mark);
+  padding: 6px 12px;
+  font-family: var(--font-m);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .2s, box-shadow .2s;
+}
+
+#clearMarksBtn:hover:not(:disabled) {
+  background: rgba(255,149,0,.10);
+  box-shadow: 0 0 14px rgba(255,149,0,.3);
+}
+
+#clearMarksBtn:disabled {
+  border-color: var(--border);
+  color: var(--text-d);
+  cursor: default;
+}
+
 .zoom-wrap {
   display: flex;
   align-items: center;
@@ -784,6 +813,22 @@ tbody tr.jump-highlight td.col-num {
 }
 
 tbody tr:hover { background: rgba(0,255,159,.035); }
+
+/* User-marked lines: must beat the zebra stripes and their !important hover */
+#resultsTable tbody tr.marked,
+#resultsTable tbody tr.marked:hover {
+  background: rgba(255,149,0,.24) !important;
+  box-shadow: inset 3px 0 0 var(--mark);
+}
+
+#resultsTable tbody tr.marked td.col-num {
+  color: var(--mark);
+  text-shadow: 0 0 7px rgba(255,149,0,.7);
+}
+
+#resultsTable tbody tr.marked td.col-msg { color: #ffe2b8; }
+
+#resultsBody td.col-num { cursor: cell; }
 
 tbody tr:hover td.col-num {
   color: var(--accent);

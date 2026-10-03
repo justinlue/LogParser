@@ -96,6 +96,10 @@
           <input type="search" id="search" placeholder="FILTER EVENTS... (COMMA-SEPARATED TERMS)" disabled>
         </div>
         <div class="rec-count" id="recCount"></div>
+        <button type="button" id="clearMarksBtn" title="Click a line number to highlight that line; click here to clear all highlights" disabled>
+          <span class="mark-dot">■</span>
+          <span id="clearMarksLabel">CLEAR MARKS</span>
+        </button>
         <div class="zoom-wrap">
           <span class="zoom-icon">A</span>
           <input type="range" id="zoomSlider" min="10" max="22" step="0.5" value="12.5" aria-label="Table text size">
@@ -109,7 +113,7 @@
           <table id="resultsTable">
             <thead>
               <tr>
-                <th class="col-num">#</th>
+                <th class="col-num" title="Click a line number to highlight that line">#</th>
                 <th>TIMESTAMP</th>
                 <th>EVT_ID</th>
                 <th>MESSAGE</th>
