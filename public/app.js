@@ -1,3 +1,5 @@
+import { createShortcuts, shortcutLabel, slotForKey } from './shortcuts.js';
+
 const fileInput  = document.getElementById('fileInput');
 const parseBtn   = document.getElementById('parseBtn');
 const btnLabel   = document.getElementById('btnLabel');
@@ -265,17 +267,168 @@ search.addEventListener('input', () => {
   searchDebounceTimer = setTimeout(applyFilter, 300);
 });
 
-search.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    clearTimeout(searchDebounceTimer);
-    const jumpLine = getJumpLine(search.value);
-    if (jumpLine !== null) {
-      jumpToLine(jumpLine);
-    } else {
-      applyFilter();
-    }
+// Run whatever is in the filter bar right now: a jump command or a filter.
+function runSearch() {
+  clearTimeout(searchDebounceTimer);
+  const jumpLine = getJumpLine(search.value);
+  if (jumpLine !== null) {
+    jumpToLine(jumpLine);
+  } else {
+    applyFilter();
   }
+}
+
+search.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') runSearch();
 });
+
+// --- Filter shortcuts (Alt+1..3) -------------------------------------------
+// Three slots, each holding a filter-bar text under a user-chosen name.
+// Pressing the hotkey (or clicking the slot) puts the text back and runs it.
+const shortcutRow = document.getElementById('shortcutRow');
+function shortcutStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;   // storage blocked — shortcuts last until the page closes
+  }
+}
+const shortcuts = createShortcuts(shortcutStorage());
+let renamingSlot = null;
+
+// Returns whether the shortcut ran (the slot is set and logs are loaded).
+function applyShortcut(index) {
+  const slot = shortcuts.list()[index];
+  if (!slot || search.disabled) return false;
+  search.value = slot.filter;
+  runSearch();
+  return true;
+}
+
+// Commit a rename that is still open; the slot buttons call this first.
+function commitRename() {
+  const input = shortcutRow.querySelector('.sc-rename-input');
+  if (input) finishRename(renamingSlot, input.value);
+}
+
+function finishRename(index, name) {
+  if (renamingSlot !== index) return;   // already committed or cancelled
+  renamingSlot = null;
+  if (name !== null) shortcuts.rename(index, name);
+  renderShortcuts();
+}
+
+function scButton(className, text, title) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = className;
+  btn.textContent = text;
+  btn.title = title;
+  return btn;
+}
+
+function renderShortcuts() {
+  const current = search.value.trim();
+  // The row is rebuilt wholesale; remember which button had focus to restore it.
+  const focused = shortcutRow.contains(document.activeElement)
+    ? Array.from(shortcutRow.querySelectorAll('button')).indexOf(document.activeElement)
+    : -1;
+  shortcutRow.innerHTML = '';
+
+  shortcuts.list().forEach((slot, i) => {
+    const hotkey = `ALT+${i + 1}`;
+    const wrap = document.createElement('div');
+    wrap.className = 'shortcut';
+    wrap.classList.toggle('empty', !slot);
+    wrap.classList.toggle('active', !!slot && slot.filter === current);
+
+    const key = document.createElement('span');
+    key.className = 'sc-key';
+    key.textContent = hotkey;
+
+    if (renamingSlot === i) {
+      const input = document.createElement('input');
+      input.className = 'sc-rename-input';
+      input.value = slot.name;
+      input.placeholder = slot.filter;
+      input.maxLength = 24;
+      input.setAttribute('aria-label', `Name for shortcut ${hotkey}`);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') finishRename(i, input.value);
+        else if (e.key === 'Escape') finishRename(i, null);
+      });
+      input.addEventListener('blur', () => finishRename(i, input.value));
+      wrap.append(key, input);
+      shortcutRow.appendChild(wrap);
+      input.focus();
+      input.select();
+      return;
+    }
+
+    const apply = scButton('sc-apply', '', slot ? `${hotkey} — filter: ${slot.filter}` : `${hotkey} — empty`);
+    const name = document.createElement('span');
+    name.className = 'sc-name';
+    name.textContent = slot ? shortcutLabel(slot) : 'EMPTY';
+    apply.append(key, name);
+    apply.disabled = !slot || search.disabled;
+    apply.addEventListener('click', () => {
+      commitRename();
+      applyShortcut(i);
+    });
+
+    const set = scButton('sc-tool', 'SET', `Save the current filter text to ${hotkey}`);
+    set.disabled = current.length === 0;
+    set.addEventListener('click', () => {
+      commitRename();
+      shortcuts.assign(i, search.value);
+      renderShortcuts();
+    });
+
+    const rename = scButton('sc-tool', '✎', `Rename ${hotkey}`);
+    rename.setAttribute('aria-label', `Rename shortcut ${hotkey}`);
+    rename.disabled = !slot;
+    rename.addEventListener('click', () => {
+      commitRename();
+      renamingSlot = i;
+      renderShortcuts();
+    });
+
+    const clear = scButton('sc-tool', '×', `Clear ${hotkey}`);
+    clear.setAttribute('aria-label', `Clear shortcut ${hotkey}`);
+    clear.disabled = !slot;
+    clear.addEventListener('click', () => {
+      commitRename();
+      shortcuts.clear(i);
+      renderShortcuts();
+    });
+
+    wrap.append(apply, set, rename, clear);
+    shortcutRow.appendChild(wrap);
+  });
+
+  if (focused !== -1 && renamingSlot === null) {
+    const btn = shortcutRow.querySelectorAll('button')[focused];
+    if (btn && !btn.disabled) btn.focus();
+  }
+}
+
+// Keep focus in an open rename input while a slot button is pressed: a blur
+// would rebuild the row mid-click and the click would be lost.
+shortcutRow.addEventListener('mousedown', (e) => {
+  if (renamingSlot !== null && e.target.closest('button')) e.preventDefault();
+});
+
+document.addEventListener('keydown', (e) => {
+  const index = slotForKey(e);
+  if (index === null || e.repeat) return;
+  if (applyShortcut(index)) e.preventDefault();
+});
+
+// SET availability and the active marker track the filter bar as it is typed.
+search.addEventListener('input', () => {
+  if (renamingSlot === null) renderShortcuts();
+});
+renderShortcuts();
 
 function parseVehicleStatusMessage(msg) {
   const map = {};
@@ -383,6 +536,7 @@ function updateRecCount(shown) {
   }
   recCount.classList.toggle('filtering', filtering && shown > 0);
   recCount.classList.toggle('no-match', filtering && shown === 0);
+  if (renamingSlot === null) renderShortcuts();
 }
 
 function clearRecCount() {
