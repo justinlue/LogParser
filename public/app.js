@@ -296,8 +296,8 @@ clearSearchBtn.addEventListener('click', () => {
 });
 search.addEventListener('input', updateClearSearchBtn);
 
-// --- Filter shortcuts (Alt+1..3) -------------------------------------------
-// Three slots, each holding a filter-bar text under a user-chosen name.
+// --- Filter shortcuts (Alt+1..6) -------------------------------------------
+// Six slots, each holding a filter-bar text under a user-chosen name.
 // Pressing the hotkey (or clicking the slot) puts the text back and runs it.
 const shortcutRow = document.getElementById('shortcutRow');
 function shortcutStorage() {
@@ -416,7 +416,12 @@ function renderShortcuts() {
       renderShortcuts();
     });
 
-    wrap.append(apply, set, rename, clear);
+    // Tools overlay the right edge of the slot (shown on hover/focus) so six
+    // slots fit one row and the name keeps the width.
+    const tools = document.createElement('div');
+    tools.className = 'sc-tools';
+    tools.append(set, rename, clear);
+    wrap.append(apply, tools);
     shortcutRow.appendChild(wrap);
   });
 

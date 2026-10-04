@@ -1,6 +1,6 @@
 // Filter shortcuts: up to SLOT_COUNT saved filter-bar texts, each bound to a
 // hotkey. Pure logic with the storage injected, so it runs under node:test.
-export const SLOT_COUNT = 3;
+export const SLOT_COUNT = 6;
 const STORAGE_KEY = 'logparse.shortcuts';
 
 const NAME_MAX = 24;
@@ -15,7 +15,7 @@ export function shortcutLabel(slot) {
   return slot.name || slot.filter;
 }
 
-// Alt+1..3 → slot index 0..2, anything else → null. Matches on the physical
+// Alt+1..6 → slot index 0..5, anything else → null. Matches on the physical
 // key (`code`) so it is layout-independent; Numpad digits stay free for Alt codes.
 export function slotForKey(e) {
   if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return null;

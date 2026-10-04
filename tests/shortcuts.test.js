@@ -16,10 +16,10 @@ test('a filter assigned to a slot is still there after a page reload', () => {
   createShortcuts(storage).assign(1, '140 , 150');
 
   const afterReload = createShortcuts(storage).list();
-  assert.equal(afterReload.length, 3);
+  assert.equal(afterReload.length, 6);
   assert.equal(afterReload[0], null);
   assert.equal(afterReload[1].filter, '140 , 150');
-  assert.equal(afterReload[2], null);
+  assert.equal(afterReload[5], null);
 });
 
 test('a shortcut is labelled by its filter text until the user renames it', () => {
@@ -66,11 +66,20 @@ test('clearing a slot empties it for good and leaves the others alone', () => {
   assert.equal(createShortcuts(storage).list()[1].filter, '150');
 });
 
-test('there are exactly three slots; a fourth cannot be created', () => {
+test('there are exactly six slots; a seventh cannot be created', () => {
   const shortcuts = createShortcuts(fakeStorage());
-  assert.equal(shortcuts.assign(3, '140'), false);
+  assert.equal(shortcuts.assign(5, '160'), true);
+  assert.equal(shortcuts.assign(6, '140'), false);
   assert.equal(shortcuts.assign(-1, '140'), false);
-  assert.deepEqual(shortcuts.list(), [null, null, null]);
+  assert.deepEqual(shortcuts.list(), [null, null, null, null, null, { name: '', filter: '160' }]);
+});
+
+test('shortcuts saved when there were only three slots are kept', () => {
+  const stored = JSON.stringify([{ name: 'Doors', filter: '140 , 150' }, null, { name: '', filter: '999' }]);
+  const shortcuts = createShortcuts(fakeStorage({ 'logparse.shortcuts': stored }));
+  assert.deepEqual(shortcuts.list(), [
+    { name: 'Doors', filter: '140 , 150' }, null, { name: '', filter: '999' }, null, null, null,
+  ]);
 });
 
 test('a blank filter cannot be saved and does not wipe the slot', () => {
@@ -80,23 +89,24 @@ test('a blank filter cannot be saved and does not wipe the slot', () => {
   assert.equal(shortcuts.list()[0].filter, '140');
 });
 
-test('corrupt or foreign stored data yields three empty slots', () => {
+test('corrupt or foreign stored data yields empty slots', () => {
   for (const raw of ['not json', '{"a":1}', '[1,"x",{"filter":5}]']) {
     const shortcuts = createShortcuts(fakeStorage({ 'logparse.shortcuts': raw }));
-    assert.deepEqual(shortcuts.list(), [null, null, null]);
+    assert.deepEqual(shortcuts.list(), [null, null, null, null, null, null]);
   }
 });
 
-test('Alt+1..3 select slots 0..2', () => {
+test('Alt+1..6 select slots 0..5', () => {
   const key = (code, mods = {}) => ({ code, altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, ...mods });
   assert.equal(slotForKey(key('Digit1')), 0);
   assert.equal(slotForKey(key('Digit2')), 1);
   assert.equal(slotForKey(key('Digit3')), 2);
+  assert.equal(slotForKey(key('Digit6')), 5);
 });
 
 test('other key combinations are not shortcuts', () => {
   const key = (code, mods = {}) => ({ code, altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, ...mods });
-  assert.equal(slotForKey(key('Digit4')), null);
+  assert.equal(slotForKey(key('Digit7')), null);
   assert.equal(slotForKey(key('Digit1', { altKey: false })), null);
   // AltGr reports as Ctrl+Alt on Windows and types a character on some layouts
   assert.equal(slotForKey(key('Digit1', { ctrlKey: true })), null);

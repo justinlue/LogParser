@@ -698,7 +698,6 @@ input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
 
 .shortcut-row {
   display: flex;
-  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 8px;
 }
@@ -711,6 +710,8 @@ input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
   font-family: var(--font-m);
   font-size: 11px;
   letter-spacing: 1.5px;
+  position: relative;
+  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -744,6 +745,7 @@ input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
   align-items: center;
   gap: 9px;
   padding: 6px 12px;
+  flex: 1;
   min-width: 0;
 }
 
@@ -757,7 +759,7 @@ input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
 
 .sc-name {
   color: var(--text-b);
-  max-width: 220px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -765,6 +767,22 @@ input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
 
 .sc-apply:disabled .sc-name { color: var(--text-d); }
 .shortcut.active .sc-name { color: var(--accent); text-shadow: var(--glow); }
+
+.sc-tools {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: var(--bg2);
+  opacity: 0;
+  transition: opacity .15s;
+}
+
+/* an empty slot has no name to make room for, so SET is always on show */
+.shortcut:hover .sc-tools,
+.shortcut:focus-within .sc-tools,
+.shortcut.empty .sc-tools { opacity: 1; }
 
 .shortcut .sc-tool {
   padding: 6px 8px;
@@ -782,7 +800,8 @@ input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
   font: inherit;
   letter-spacing: 1px;
   padding: 6px 12px 6px 0;
-  width: 200px;
+  flex: 1;
+  min-width: 0;
   caret-color: var(--accent);
 }
 
