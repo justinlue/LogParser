@@ -5,6 +5,7 @@ import { handleParseRequest } from './src/routes.js';
 import { setTimezoneOffsetHours } from './src/formatter.js';
 import { saveConvertedCsv } from './src/downloads.js';
 import { openInChrome } from './src/browser.js';
+import { loadShortcutFile, saveShortcutFile } from './src/shortcutStore.js';
 import { execFileSync, execSync } from 'child_process';
 import fs from 'fs';
 
@@ -239,6 +240,24 @@ app.post('/api/parse', upload.single('logfile'), (req, res) => {
     res.status(status).json(body);
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Filter shortcuts (Alt+1..6) persisted beside the server.
+const SHORTCUTS_FILE = 'shortcuts.json';
+
+app.get('/api/shortcuts', (req, res) => {
+  res.json({ slots: loadShortcutFile(SHORTCUTS_FILE) });
+});
+
+app.put('/api/shortcuts', express.json({ limit: '16kb' }), (req, res) => {
+  if (!req.body || !Array.isArray(req.body.slots)) {
+    return res.status(400).json({ error: 'slots must be an array' });
+  }
+  try {
+    res.json({ slots: saveShortcutFile(SHORTCUTS_FILE, req.body.slots) });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

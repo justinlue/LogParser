@@ -1,4 +1,4 @@
-import { createShortcuts, shortcutLabel, slotForKey } from './shortcuts.js';
+import { createShortcuts, shortcutLabel, slotForKey, STORAGE_KEY as SHORTCUTS_KEY } from './shortcuts.js';
 
 const fileInput  = document.getElementById('fileInput');
 const parseBtn   = document.getElementById('parseBtn');
@@ -300,15 +300,75 @@ search.addEventListener('input', updateClearSearchBtn);
 // Six slots, each holding a filter-bar text under a user-chosen name.
 // Pressing the hotkey (or clicking the slot) puts the text back and runs it.
 const shortcutRow = document.getElementById('shortcutRow');
-function shortcutStorage() {
+// The server's shortcuts.json is the lasting copy, so the slots survive another
+// browser, another port or cleared site data. localStorage is only the copy
+// that is on hand before the server answers; every change is written to both.
+const shortcutStorage = (() => {
+  let local = null;
   try {
-    return window.localStorage;
+    local = window.localStorage;
   } catch {
-    return null;   // storage blocked — shortcuts last until the page closes
+    /* storage blocked — the server copy still works */
+  }
+  let value = null;
+
+  function setLocal(v) {
+    value = v;
+    try {
+      local.setItem(SHORTCUTS_KEY, v);
+    } catch {
+      /* storage unavailable or full — ignore */
+    }
+  }
+
+  function pushToServer(v) {
+    fetch('api/shortcuts', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slots: JSON.parse(v) }),
+    }).catch(() => { /* offline — the local copy still has it */ });
+  }
+
+  return {
+    getItem() {
+      try {
+        const v = local.getItem(SHORTCUTS_KEY);
+        if (v !== null) value = v;
+      } catch {
+        /* fall back to the in-memory copy */
+      }
+      return value;
+    },
+    setItem(_key, v) {
+      setLocal(v);
+      pushToServer(v);
+    },
+    setLocal,
+    pushToServer,
+  };
+})();
+
+let shortcuts = createShortcuts(shortcutStorage);
+let renamingSlot = null;
+
+// Take the server's saved slots; if it has none yet, hand it the ones this
+// browser already has so earlier setups are not lost.
+async function syncShortcutsFromServer() {
+  try {
+    const res = await fetch('api/shortcuts');
+    if (!res.ok) return;
+    const { slots } = await res.json();
+    if (Array.isArray(slots)) {
+      shortcutStorage.setLocal(JSON.stringify(slots));
+      shortcuts = createShortcuts(shortcutStorage);
+      if (renamingSlot === null) renderShortcuts();
+    } else if (shortcuts.list().some(Boolean)) {
+      shortcutStorage.pushToServer(JSON.stringify(shortcuts.list()));
+    }
+  } catch {
+    /* server unreachable — keep using the local copy */
   }
 }
-const shortcuts = createShortcuts(shortcutStorage());
-let renamingSlot = null;
 
 // Returns whether the shortcut ran (the slot is set and logs are loaded).
 function applyShortcut(index) {
@@ -448,6 +508,7 @@ search.addEventListener('input', () => {
   if (renamingSlot === null) renderShortcuts();
 });
 renderShortcuts();
+syncShortcutsFromServer();
 
 function parseVehicleStatusMessage(msg) {
   const map = {};

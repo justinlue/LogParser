@@ -1,7 +1,7 @@
 // Filter shortcuts: up to SLOT_COUNT saved filter-bar texts, each bound to a
 // hotkey. Pure logic with the storage injected, so it runs under node:test.
 export const SLOT_COUNT = 6;
-const STORAGE_KEY = 'logparse.shortcuts';
+export const STORAGE_KEY = 'logparse.shortcuts';
 
 const NAME_MAX = 24;
 
@@ -25,21 +25,27 @@ export function slotForKey(e) {
   return index < SLOT_COUNT ? index : null;
 }
 
-function load(storage) {
+// Untrusted value (stored JSON, a request body) → exactly SLOT_COUNT slots,
+// each null or { name, filter }. Anything malformed becomes an empty slot.
+export function normalizeSlots(value) {
   const slots = new Array(SLOT_COUNT).fill(null);
-  try {
-    const arr = JSON.parse(storage.getItem(STORAGE_KEY));
-    if (!Array.isArray(arr)) return slots;
-    for (let i = 0; i < SLOT_COUNT; i++) {
-      const s = arr[i];
-      if (s && typeof s.filter === 'string' && s.filter.trim()) {
-        slots[i] = { name: cleanName(s.name), filter: s.filter.trim() };
-      }
+  if (!Array.isArray(value)) return slots;
+  for (let i = 0; i < SLOT_COUNT; i++) {
+    const s = value[i];
+    if (s && typeof s.filter === 'string' && s.filter.trim()) {
+      slots[i] = { name: cleanName(s.name), filter: s.filter.trim() };
     }
-  } catch {
-    /* storage unavailable or corrupt — start empty */
   }
   return slots;
+}
+
+function load(storage) {
+  try {
+    return normalizeSlots(JSON.parse(storage.getItem(STORAGE_KEY)));
+  } catch {
+    /* storage unavailable or corrupt — start empty */
+    return normalizeSlots(null);
+  }
 }
 
 function save(storage, slots) {
