@@ -630,6 +630,24 @@ input[type="search"]::placeholder { color: var(--text-d); }
 input[type="search"]::-webkit-search-cancel-button { display: none; }
 input[type="search"]:disabled { opacity: .22; cursor: not-allowed; }
 
+#clearSearchBtn {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--font-m);
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 2px 4px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color .2s, text-shadow .2s;
+}
+
+#clearSearchBtn:hover {
+  color: var(--accent);
+  text-shadow: var(--glow);
+}
+
 .rec-count {
   font-size: 11px;
   color: var(--text-d);

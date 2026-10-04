@@ -4,6 +4,7 @@ import { loadDictionary } from './src/dictionary.js';
 import { handleParseRequest } from './src/routes.js';
 import { setTimezoneOffsetHours } from './src/formatter.js';
 import { saveConvertedCsv } from './src/downloads.js';
+import { openInChrome } from './src/browser.js';
 import { execFileSync, execSync } from 'child_process';
 import fs from 'fs';
 
@@ -251,4 +252,9 @@ app.use((err, req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`LogParse listening on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  const url = `http://localhost:${PORT}`;
+  console.log(`LogParse listening on ${url}`);
+  // NO_OPEN=1 starts the server without opening a browser tab.
+  if (!process.env.NO_OPEN) openInChrome(url);
+});

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm install        # install dependencies (first time only)
-npm start          # start server on http://localhost:3000 (PORT env var overrides)
+npm start          # start server on http://localhost:3000 (PORT env var overrides) and open it in Chrome; NO_OPEN=1 skips the browser
 npm test           # run all tests with node:test runner
 ```
 
@@ -33,6 +33,7 @@ uploaded buffer → handleParseRequest (routes.js)
 - `src/formatter.js` — dispatches on `paramType`: `int` fills `%d` placeholders via `parseInt`, `str` fills `%s` placeholders verbatim, `array` appends all params as comma-joined 2-digit uppercase hex bytes (e.g. `F7,80,25,14,B0,1D`), `none` emits description verbatim. Extra params append ` (+ extra: ...)` for `int`/`str`/`none`; missing params leave placeholders literal. Non-numeric timestamps produce `[invalid time]`.
 - `src/sn.js` — validates upload filename against `/^raw_([A-Za-z0-9]{15})\.(txt|log)$/`; throws on mismatch.
 - `src/routes.js` — pure function `handleParseRequest(filename, buffer, dictionary) → { status, body }`. No Express coupling; independently testable.
+- `src/browser.js` — `openInChrome(url)`, called once the server is listening unless `NO_OPEN` is set. Best effort: a launch failure only logs a warning.
 - `server.js` — Express bootstrap: loads dictionary, mounts multer (5 MB limit, `memoryStorage`), serves `public/` as static, handles `POST /api/parse` and `GET /api/query`, includes an error middleware for `LIMIT_FILE_SIZE → 413`.
 
 **Frontend** (`public/`) — vanilla HTML/CSS/JS, no framework or bundler. `app.js` POSTs to `/api/parse`, receives `{ sn, records }`, shows a device SN banner, populates a monospace table, and filters rows live on search input. Rows for events 3025 (`key: value;` pairs) and 1380/2152 (`%d` templates, split on numbers via `NUMERIC_DIFF_EVENTS`) highlight fields whose value differs from the previous rendered row of the same event ID (`.changed-field`). The REMOTE_FETCH panel also GETs `/api/query` to pull logs from Aliyun without a local file. `app.js` is loaded as an ES module so it can import `public/shortcuts.js`: three filter-shortcut slots (Alt+1..3) that each store a filter-bar text plus an optional user-chosen name in `localStorage` (`logparse.shortcuts`). `shortcuts.js` is pure (storage injected, no DOM) and is the one frontend file under test; the slot row under the filter bar is rendered by `app.js`.
@@ -73,5 +74,6 @@ Tests use Node's built-in `node:test` — zero extra dependencies. Coverage per 
 - `formatter.test.js` — all four `paramType` branches, edge cases (too few/many params, invalid timestamp, non-numeric int param)
 - `sn.test.js` — valid `.txt`/`.log`, rejects wrong prefix, wrong extension, non-15-char SN, non-alphanumeric
 - `downloads.test.js` — same-SN save overwrites, one file per SN, directory creation
+- `browser.test.js` — per-platform Chrome launch command (`src/browser.js`)
 - `routes.test.js` — end-to-end pipeline through `handleParseRequest` without Express
 - `shortcuts.test.js` — filter-shortcut slots (`public/shortcuts.js`): persistence, rename/label fallback, clear, three-slot limit, corrupt storage, Alt+1..3 key mapping

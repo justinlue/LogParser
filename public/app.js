@@ -282,6 +282,20 @@ search.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') runSearch();
 });
 
+// One-click clear for the filter bar; only shown while there is text to clear.
+const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+function updateClearSearchBtn() {
+  clearSearchBtn.hidden = search.value.length === 0;
+}
+
+clearSearchBtn.addEventListener('click', () => {
+  search.value = '';
+  runSearch();
+  search.focus();
+});
+search.addEventListener('input', updateClearSearchBtn);
+
 // --- Filter shortcuts (Alt+1..3) -------------------------------------------
 // Three slots, each holding a filter-bar text under a user-chosen name.
 // Pressing the hotkey (or clicking the slot) puts the text back and runs it.
@@ -537,6 +551,7 @@ function updateRecCount(shown) {
   recCount.classList.toggle('filtering', filtering && shown > 0);
   recCount.classList.toggle('no-match', filtering && shown === 0);
   if (renamingSlot === null) renderShortcuts();
+  updateClearSearchBtn();
 }
 
 function clearRecCount() {
