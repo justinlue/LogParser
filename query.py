@@ -312,14 +312,15 @@ def main():
     parser = argparse.ArgumentParser(
         description='Query logs from Aliyun SLS and/or Tencent CLS, or fallback to local raw file')
     parser.add_argument('--sn', help='device SN, e.g. NSBB22100D59F7B')
-    parser.add_argument('--vin', help='vehicle VIN (17-char); resolved to SN before searching')
+    parser.add_argument('--vin', help='vehicle VIN (17-char); resolved to SN before searching, '
+                                      'or only checked against --sn when both are given')
     parser.add_argument('--start', help='start date in YYYY-MM-DD')
     parser.add_argument('--end', help='end date in YYYY-MM-DD')
     parser.add_argument('--source', help='aliyun, tencent, or both (default both)')
     args = parser.parse_args()
 
-    if bool(args.sn) == bool(args.vin):
-        print(json.dumps({'error': 'provide exactly one of --sn or --vin'}))
+    if not args.sn and not args.vin:
+        print(json.dumps({'error': 'provide --sn and/or --vin'}))
         return 2
 
     source = (args.source or 'both').strip().lower()
@@ -364,14 +365,19 @@ def main():
         to_time = to_epoch_local(args.end, end_of_day=True) or to_time
     dbg(f'Time window: from_time={from_time} to_time={to_time}')
 
+    # With both given, the SN is the sole search criterion; the VIN is still
+    # resolved so the caller can tell whether it belongs to that SN (vin_sn).
     resolved_sn = args.sn
+    vin_sn = None
     if args.vin:
         for name, p in valid_providers:
             sn = p.resolve_sn_from_vin(from_time, to_time, args.vin)
             if sn:
-                resolved_sn = sn
-                dbg(f'Resolved VIN {args.vin} -> SN {resolved_sn} via {name}')
+                vin_sn = sn
+                dbg(f'Resolved VIN {args.vin} -> SN {vin_sn} via {name}')
                 break
+        if not resolved_sn:
+            resolved_sn = vin_sn
         if not resolved_sn:
             dbg('VIN lookup returned no __tag__:sn on any provider')
             print(json.dumps({'error': f'could not resolve SN from VIN {args.vin}'}))
@@ -403,14 +409,15 @@ def main():
         with open(out_fname, 'w', encoding='utf8') as fo:
             json.dump(result, fo)
         dbg(f'Saved query result to {out_fname}')
-        print(json.dumps({'saved': os.path.abspath(out_fname), 'sn': resolved_sn}))
+        print(json.dumps({'saved': os.path.abspath(out_fname), 'sn': resolved_sn,
+                          'vin_sn': vin_sn}))
         sys.stdout.flush()
         return 0
     except Exception as e:
         dbg('Failed to save query result: ' + str(e))
         dbg(traceback.format_exc())
         # fall back to printing the JSON to stdout
-        print(json.dumps(result))
+        print(json.dumps(dict(result, vin_sn=vin_sn)))
         sys.stdout.flush()
         return 0
 

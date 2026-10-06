@@ -6,6 +6,7 @@ import { setTimezoneOffsetHours } from './src/formatter.js';
 import { saveConvertedCsv } from './src/downloads.js';
 import { openInChrome } from './src/browser.js';
 import { loadShortcutFile, saveShortcutFile } from './src/shortcutStore.js';
+import { buildQueryArgs, snVinMismatchWarning } from './src/remoteQuery.js';
 import { execFileSync, execSync } from 'child_process';
 import fs from 'fs';
 
@@ -52,7 +53,8 @@ const upload = multer({
 app.use(express.static('public'));
 
 // New endpoint: fetch logs from Aliyun SLS and/or Tencent CLS via local query.py helper.
-// Query params: sn or vin (exactly one required), start (optional, YYYY-MM-DD),
+// Query params: sn and/or vin (at least one; with both, sn is the search
+// criterion and vin is only checked against it), start (optional, YYYY-MM-DD),
 // end (optional, YYYY-MM-DD), source (optional: aliyun | tencent | both, default both)
 app.get('/api/query', (req, res) => {
   const sn = req.query.sn;
@@ -62,10 +64,7 @@ app.get('/api/query', (req, res) => {
   const source = req.query.source;
   if (!sn && !vin) return res.status(400).json({ error: 'missing sn or vin query parameter' });
   try {
-    const args = vin ? ['query.py', '--vin', vin] : ['query.py', '--sn', sn];
-    if (start) args.push('--start', start);
-    if (end) args.push('--end', end);
-    if (source) args.push('--source', source);
+    const args = buildQueryArgs({ sn, vin, start, end, source });
     const opts = { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 };
     const out = execFileSync(PYTHON, args, opts);
     let result;
@@ -76,6 +75,9 @@ app.get('/api/query', (req, res) => {
       return res.status(500).json({ error: 'invalid response from query.py' });
     }
     const effectiveSn = (result && result.sn) || sn;
+    // SN and VIN entered together: logs are the SN's, but flag a VIN of another device
+    const warning = snVinMismatchWarning({ sn, vin, vinSn: result && result.vin_sn });
+    const withWarning = body => (warning && body && !body.error ? { ...body, warning } : body);
 
     // If python saved the query result to a file, read it and parse
     if (result && result.saved) {
@@ -150,7 +152,7 @@ app.get('/api/query', (req, res) => {
           const { status, body } = handleParseRequest(`raw_${effectiveSn}.csv`, buffer, dictionary);
           // include saved path in response for visibility
           if (body && typeof body === 'object') body._saved_csv = savedCsvPath;
-          return res.status(status).json(body);
+          return res.status(status).json(withWarning(body));
         }
       } catch (e) {
         // not JSON, treat as plain CSV/text
@@ -158,14 +160,14 @@ app.get('/api/query', (req, res) => {
       // treat as raw csv/text
       const buffer = Buffer.from(content, 'utf8');
       const { status, body } = handleParseRequest(`raw_${effectiveSn}.csv`, buffer, dictionary);
-      return res.status(status).json(body);
+      return res.status(status).json(withWarning(body));
     }
 
     // legacy fields
     if (result && result.content) {
       const buffer = Buffer.from(result.content, 'utf8');
       const { status, body } = handleParseRequest(`raw_${effectiveSn}.csv`, buffer, dictionary);
-      return res.status(status).json(body);
+      return res.status(status).json(withWarning(body));
     }
 
     if (result && result.datas) {
@@ -209,7 +211,7 @@ app.get('/api/query', (req, res) => {
       const csvText = datas.map(d => JSON.stringify(d)).join('\n');
       const buffer = Buffer.from(csvText, 'utf8');
       const { status, body } = handleParseRequest(`raw_${effectiveSn}.log`, buffer, dictionary);
-      return res.status(status).json(body);
+      return res.status(status).json(withWarning(body));
     }
 
     return res.status(500).json({ error: 'unexpected response from query.py', result });

@@ -135,8 +135,9 @@ queryBtn.addEventListener('click', async () => {
   clearRecCount();
 
   const params = new URLSearchParams();
+  // with both entered the server searches by SN and only checks the VIN against it
+  if (sn) params.set('sn', sn);
   if (vin) params.set('vin', vin);
-  else params.set('sn', sn);
   const source = (sourceSelect.value || 'both').trim();
   if (source && source !== 'both') params.set('source', source);
   let endVal = endInput.value;
@@ -162,9 +163,10 @@ queryBtn.addEventListener('click', async () => {
     search.disabled = false;
     clearMarks();
     render(allRecords);
-    clearError();
-    if (vin) history.add(HIST_VIN, vin);
-    else     history.add(HIST_SN, sn);
+    if (json.warning) showError(json.warning);
+    else              clearError();
+    if (sn) history.add(HIST_SN, sn);
+    if (vin && !json.warning) history.add(HIST_VIN, vin);
   } catch (err) {
     showError(err.message);
   } finally {

@@ -50,10 +50,10 @@ uploaded buffer → handleParseRequest (routes.js)
 The REMOTE_FETCH panel queries Aliyun SLS without requiring a local file upload.
 
 **Endpoint:** `GET /api/query?sn=<SN>&start=<YYYY-MM-DD>&end=<YYYY-MM-DD>`
-- `sn` — required; 15-char alphanumeric device serial number
+- `sn` / `vin` — at least one required. `sn` is the 15-char alphanumeric device serial number; a `vin` alone is resolved to its SN first. With both, the SN is the sole search criterion and the VIN is only checked against it: if it resolves to another SN, the response carries `warning: "The current SN and VIN do not match."`, which the frontend shows in the error box above the SN's logs. A VIN that resolves to nothing in the time window raises no warning.
 - `start` / `end` — optional date range (inclusive). When omitted the server fetches all available logs.
 
-**How it works:** `server.js` spawns `query.py` via `execFileSync`, passing `--sn`, `--start`, and `--end`. `query.py` authenticates with Aliyun SLS and returns a JSON object. The server converts the structured response to CSV, runs it through `handleParseRequest`, saves a copy to `downloads/raw_<sn>_converted.csv` (via `src/downloads.js`), and returns `{ sn, records }` in the same shape as `/api/parse`.
+**How it works:** `server.js` spawns `query.py` via `execFileSync` with the arguments from `buildQueryArgs` (`src/remoteQuery.js`): `--sn` and/or `--vin`, `--start`, `--end`, `--source`. `query.py` reports the SN a VIN resolves to as `vin_sn`, which `snVinMismatchWarning` compares with the entered SN. `query.py` authenticates with Aliyun SLS and returns a JSON object. The server converts the structured response to CSV, runs it through `handleParseRequest`, saves a copy to `downloads/raw_<sn>_converted.csv` (via `src/downloads.js`), and returns `{ sn, records }` in the same shape as `/api/parse`.
 
 **Environment:**
 - `TIMEZONE_OFFSET_HOURS` — integer hours to shift timestamps (e.g. `8` for CST). Defaults to `0` (UTC) if unset.
@@ -76,5 +76,6 @@ Tests use Node's built-in `node:test` — zero extra dependencies. Coverage per 
 - `downloads.test.js` — same-SN save overwrites, one file per SN, directory creation
 - `browser.test.js` — per-platform Chrome launch command (`src/browser.js`)
 - `shortcutStore.test.js` — `shortcuts.json` round-trip, missing/corrupt file, cleaning and rejecting bad input
+- `remoteQuery.test.js` — `query.py` arguments for SN, VIN and both; SN/VIN mismatch warning (different SN, same SN, unresolved VIN, single input)
 - `routes.test.js` — end-to-end pipeline through `handleParseRequest` without Express
 - `shortcuts.test.js` — filter-shortcut slots (`public/shortcuts.js`): persistence, rename/label fallback, clear, six-slot limit, corrupt storage, Alt+1..6 key mapping
