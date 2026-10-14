@@ -86,8 +86,8 @@ function updateMarksUi() {
   renderMarksSelect();
 }
 
-// The MARKS drop-down lists every marked line so any of them can be reached
-// after jumping to one. The picked mark stays selected, so arrow keys on the
+// The MARKS drop-down lists each block of adjacent marked lines so any of them
+// can be reached after jumping to one; picking a block jumps to its first line. The picked mark stays selected, so arrow keys on the
 // closed select step from mark to mark.
 function renderMarksSelect() {
   const picked = marksSelect.value;

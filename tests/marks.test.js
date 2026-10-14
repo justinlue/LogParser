@@ -10,8 +10,24 @@ const records = [
 ];
 
 test('marks are listed in line order, not in the order they were clicked', () => {
+  const entries = markEntries(new Set([4, 1]), records);
+  assert.deepEqual(entries.map(e => e.lineNum), [1, 4]);
+});
+
+test('adjacent marked lines form one block that jumps to its first line', () => {
   const entries = markEntries(new Set([4, 1, 3]), records);
-  assert.deepEqual(entries.map(e => e.lineNum), [1, 3, 4]);
+  assert.deepEqual(entries.map(e => [e.lineNum, e.lastLine]), [[1, 1], [3, 4]]);
+});
+
+test('a block is labelled by its line range and its first line', () => {
+  const [entry] = markEntries(new Set([3, 2, 4]), records);
+  assert.equal(entry.label, '0002-0004 │ 2026-10-01 08:00:02 │ 3025 │ speed: 0; gear: P;');
+});
+
+test('a gap left by a line outside the loaded records splits the block', () => {
+  const gappy = records.filter(r => r.lineNum !== 3);
+  const entries = markEntries(new Set([2, 3, 4]), gappy);
+  assert.deepEqual(entries.map(e => [e.lineNum, e.lastLine]), [[2, 2], [4, 4]]);
 });
 
 test('each entry shows the padded line number, time, event ID and message', () => {
