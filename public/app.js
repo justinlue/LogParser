@@ -1,4 +1,5 @@
 import { createShortcuts, shortcutLabel, slotForKey, STORAGE_KEY as SHORTCUTS_KEY } from './shortcuts.js';
+import { formatLineNum, markEntries } from './marks.js';
 
 const fileInput  = document.getElementById('fileInput');
 const parseBtn   = document.getElementById('parseBtn');
@@ -74,6 +75,7 @@ let allRecords = [];
 // DOM so marks survive filter/jump re-renders; reset when new logs are loaded.
 const clearMarksBtn   = document.getElementById('clearMarksBtn');
 const clearMarksLabel = document.getElementById('clearMarksLabel');
+const marksSelect     = document.getElementById('marksSelect');
 const markedLines = new Set();
 
 function updateMarksUi() {
@@ -81,7 +83,34 @@ function updateMarksUi() {
   clearMarksLabel.textContent = markedLines.size
     ? `CLEAR MARKS (${markedLines.size})`
     : 'CLEAR MARKS';
+  renderMarksSelect();
 }
+
+// The MARKS drop-down lists every marked line so any of them can be reached
+// after jumping to one. The picked mark stays selected, so arrow keys on the
+// closed select step from mark to mark.
+function renderMarksSelect() {
+  const picked = marksSelect.value;
+  const entries = markEntries(markedLines, allRecords);
+  const heading = document.createElement('option');
+  heading.value = '';
+  heading.textContent = entries.length ? `MARKS (${entries.length})` : 'MARKS';
+  marksSelect.replaceChildren(heading, ...entries.map(({ lineNum, label }) => {
+    const opt = document.createElement('option');
+    opt.value = String(lineNum);
+    opt.textContent = label;
+    return opt;
+  }));
+  marksSelect.value = entries.some(e => String(e.lineNum) === picked) ? picked : '';
+  marksSelect.disabled = entries.length === 0;
+}
+
+marksSelect.addEventListener('change', () => {
+  const lineNum = parseInt(marksSelect.value, 10);
+  if (Number.isNaN(lineNum)) return;
+  search.value = '';
+  jumpToLine(lineNum);
+});
 
 function clearMarks() {
   markedLines.clear();
@@ -640,7 +669,7 @@ function render(records) {
 
     const tdNum  = document.createElement('td');
     tdNum.className = 'col-num';
-    tdNum.textContent = String(r.lineNum).padStart(4, '0');
+    tdNum.textContent = formatLineNum(r.lineNum);
 
     const tdTime = document.createElement('td');
     tdTime.className = 'col-time';
