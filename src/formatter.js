@@ -13,20 +13,30 @@ export function setTimezoneOffsetHours(h) {
   timezoneOffsetHours = n;
 }
 
+// The second field of a log line says which part of the device logged it.
+const SOURCE_NAMES = { 0: 'MCU', 1: 'BLE', 6: 'LTE' };
+
+function sourceName(code) {
+  if (code === undefined || code === null) return '';
+  return SOURCE_NAMES[code] || String(code);
+}
+
 export function formatRecord(record, dictionary) {
-  const { rawTimestamp, eventId, params } = record;
+  const { rawTimestamp, source: sourceCode, eventId, params } = record;
   const time = formatTimestamp(rawTimestamp);
+  const source = sourceName(sourceCode);
   const entry = dictionary.get(eventId);
 
   if (!entry) {
     return {
       time,
       eventId,
+      source,
       message: `[unknown event ${eventId}]: ${params.join(', ')}`,
     };
   }
 
-  return { time, eventId, message: buildMessage(eventId, entry, params) };
+  return { time, eventId, source, message: buildMessage(eventId, entry, params) };
 }
 
 function buildMessage(eventId, { paramType, description }, params) {

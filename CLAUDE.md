@@ -24,13 +24,13 @@ No build step. No linter configured. Uses ES modules (`"type": "module"` in pack
 ```
 uploaded buffer → handleParseRequest (routes.js)
                     ├─ extractSn(filename)         → SN string or throws → 400
-                    ├─ parseRawText(text)           → Array<{ rawTimestamp, eventId, params[] }>
-                    └─ formatRecord(record, dict)   → { time, eventId, message }
+                    ├─ parseRawText(text)           → Array<{ rawTimestamp, source, eventId, params[] }>
+                    └─ formatRecord(record, dict)   → { time, eventId, source, message }
 ```
 
 - `src/dictionary.js` — reads `event_trace.csv` once at startup into `Map<number, { paramCount, paramType, description }>`. Keys are numeric event IDs.
-- `src/parser.js` — splits raw log text on newlines; each line is comma-separated (`timestamp, eventId, ...params`). Lines with fewer than 2 fields or blank lines are silently dropped.
-- `src/formatter.js` — dispatches on `paramType`: `int` fills `%d` placeholders via `parseInt`, `str` fills `%s` placeholders verbatim, `array` appends all params as comma-joined 2-digit uppercase hex bytes (e.g. `F7,80,25,14,B0,1D`), `none` emits description verbatim. Extra params append ` (+ extra: ...)` for `int`/`str`/`none`; missing params leave placeholders literal. Non-numeric timestamps produce `[invalid time]`.
+- `src/parser.js` — splits raw log text on newlines; takes the log text from the quoted `FG_log_0` cells; each line is whitespace-separated (`timestamp source eventId typeCode paramCount ...params`). Blank lines, lines with fewer than 5 fields, and lines whose timestamp or eventId is not numeric are silently dropped.
+- `src/formatter.js` — dispatches on `paramType`: `int` fills `%d` placeholders via `parseInt`, `str` fills `%s` placeholders verbatim, `array` appends all params as comma-joined 2-digit uppercase hex bytes (e.g. `F7,80,25,14,B0,1D`), `none` emits description verbatim. Extra params append ` (+ extra: ...)` for `int`/`str`/`none`; missing params leave placeholders literal. Non-numeric timestamps produce `[invalid time]`. `source` is named from the log line's second field: `6` → `LTE`, `0` → `MCU`, `1` → `BLE`; any other code is shown as-is, a missing one as blank.
 - `src/sn.js` — validates upload filename against `/^raw_([A-Za-z0-9]{15})\.(txt|log)$/`; throws on mismatch.
 - `src/routes.js` — pure function `handleParseRequest(filename, buffer, dictionary) → { status, body }`. No Express coupling; independently testable.
 - `src/browser.js` — `openInChrome(url)`, called once the server is listening unless `NO_OPEN` is set. Best effort: a launch failure only logs a warning.
@@ -41,7 +41,8 @@ uploaded buffer → handleParseRequest (routes.js)
 ## Key Data Contracts
 
 - Upload field name: `logfile`
-- Response shape: `{ sn: string, records: Array<{ time: string, eventId: number, message: string }> }`
+- Log line (inside the `FG_log_0` cell, whitespace-separated): `timestamp source eventId typeCode paramCount ...params`. The CSV/JSON `__source__` column is not used; it is empty in fetched data. The table shows `source` in a SOURCE column after EVT_ID.
+- Response shape: `{ sn: string, records: Array<{ time: string, eventId: number, source: string, message: string }> }`
 - Time format: `YYYY-MM-DD HH:mm:ss` UTC, derived from Unix epoch seconds × 1000
 - Dictionary CSV columns: `event_id, param_cnt, param_type, description` (quoted descriptions with embedded commas are handled)
 
@@ -70,8 +71,8 @@ The REMOTE_FETCH panel queries Aliyun SLS without requiring a local file upload.
 
 Tests use Node's built-in `node:test` — zero extra dependencies. Coverage per file:
 - `dictionary.test.js` — CSV parsing, quoted descriptions, numeric key types
-- `parser.test.js` — field extraction, blank/short line skipping, CRLF handling
-- `formatter.test.js` — all four `paramType` branches, edge cases (too few/many params, invalid timestamp, non-numeric int param)
+- `parser.test.js` — field extraction (incl. source code), blank/short line skipping, CRLF handling
+- `formatter.test.js` — all four `paramType` branches, edge cases (too few/many params, invalid timestamp, non-numeric int param), source code → name
 - `sn.test.js` — valid `.txt`/`.log`, rejects wrong prefix, wrong extension, non-15-char SN, non-alphanumeric
 - `downloads.test.js` — same-SN save overwrites, one file per SN, directory creation
 - `browser.test.js` — per-platform Chrome launch command (`src/browser.js`)

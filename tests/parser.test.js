@@ -48,3 +48,9 @@ test('parseRawText handles CRLF line endings', () => {
   const records = parseRawText(text);
   assert.equal(records.length, 2);
 });
+
+test('parseRawText keeps the second field of each line as the source code', () => {
+  const text = 'FG_log_0\n"1777815062 6 2004 2 1 128\n1777815062 0 2004 2 1 128\n1777815062 1 2075 0 0\n"';
+  const records = parseRawText(text);
+  assert.deepEqual(records.map(r => r.source), ['6', '0', '1']);
+});

@@ -78,3 +78,24 @@ test('formatRecord INT32 with non-numeric param falls back to raw string', () =>
   const r = formatRecord({ rawTimestamp: 1777815062, eventId: 2004, params: ['notanumber'] }, DICT);
   assert.equal(r.message, 'Ble send pkt len: notanumber to mcu');
 });
+
+test('formatRecord names the source: 6 is LTE, 0 is MCU, 1 is BLE', () => {
+  const named = ['6', '0', '1'].map(source =>
+    formatRecord({ rawTimestamp: 1777815062, source, eventId: 2004, params: ['128'] }, DICT).source);
+  assert.deepEqual(named, ['LTE', 'MCU', 'BLE']);
+});
+
+test('formatRecord shows an unlisted source code as-is', () => {
+  const r = formatRecord({ rawTimestamp: 1777815062, source: '7', eventId: 2004, params: ['128'] }, DICT);
+  assert.equal(r.source, '7');
+});
+
+test('formatRecord leaves the source blank when the record has none', () => {
+  const r = formatRecord({ rawTimestamp: 1777815062, eventId: 2004, params: ['128'] }, DICT);
+  assert.equal(r.source, '');
+});
+
+test('formatRecord names the source of an unknown event too', () => {
+  const r = formatRecord({ rawTimestamp: 1777815062, source: '1', eventId: 9999, params: [] }, DICT);
+  assert.equal(r.source, 'BLE');
+});

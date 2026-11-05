@@ -679,6 +679,10 @@ function render(records) {
     tdId.className = 'col-id';
     tdId.textContent = String(r.eventId);
 
+    const tdSource = document.createElement('td');
+    tdSource.className = 'col-source';
+    tdSource.textContent = r.source || '';
+
     let tdMsg;
     if (r.eventId === 3025) {
       const parsed = parseVehicleStatusMessage(r.message);
@@ -694,7 +698,7 @@ function render(records) {
       tdMsg.textContent = r.message;
     }
 
-    tr.append(tdNum, tdTime, tdId, tdMsg);
+    tr.append(tdNum, tdTime, tdId, tdSource, tdMsg);
     fragment.appendChild(tr);
   }
   resultsBody.innerHTML = '';

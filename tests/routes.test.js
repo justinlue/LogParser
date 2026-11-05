@@ -38,3 +38,9 @@ test('handleParseRequest passes unknown events through to formatter', () => {
   assert.equal(result.status, 200);
   assert.match(result.body.records[0].message, /\[unknown event 9999\]/);
 });
+
+test('handleParseRequest names each record source from its log line', () => {
+  const buffer = Buffer.from('FG_log_0\n"1777815062 6 2004 2 1 128\n1777815062 0 2004 2 1 128\n1777815382 1 2075 0 0\n"');
+  const result = handleParseRequest('raw_NSB023567819006.csv', buffer, DICT);
+  assert.deepEqual(result.body.records.map(r => r.source), ['LTE', 'MCU', 'BLE']);
+});

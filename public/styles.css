@@ -942,6 +942,12 @@ td.col-id {
   text-shadow: var(--glow2);
 }
 
+td.col-source {
+  color: var(--accent3);
+  white-space: nowrap;
+  width: 64px;
+}
+
 td.col-msg { color: var(--text-b); }
 
 .changed-field {

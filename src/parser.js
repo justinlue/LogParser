@@ -47,6 +47,7 @@ function parseLogLine(line) {
   if (fields.length < 5) return null;
   const rawTimestamp = parseInt(fields[0], 10);
   if (Number.isNaN(rawTimestamp)) return null;
+  const source = fields[1];
   const eventId = parseInt(fields[2], 10);
   if (Number.isNaN(eventId)) return null;
   const typeCode = parseInt(fields[3], 10);
@@ -63,5 +64,5 @@ function parseLogLine(line) {
   } else {
     params = fields.slice(5);
   }
-  return { rawTimestamp, eventId, params };
+  return { rawTimestamp, source, eventId, params };
 }
