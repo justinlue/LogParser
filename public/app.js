@@ -284,6 +284,7 @@ function applyFilter() {
       return (
         r.time.toLowerCase().includes(t) ||
         String(r.eventId).includes(t) ||
+        (r.source || '').toLowerCase().includes(t) ||
         r.message.toLowerCase().includes(t)
       );
     })

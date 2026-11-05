@@ -41,7 +41,7 @@ uploaded buffer → handleParseRequest (routes.js)
 ## Key Data Contracts
 
 - Upload field name: `logfile`
-- Log line (inside the `FG_log_0` cell, whitespace-separated): `timestamp source eventId typeCode paramCount ...params`. The CSV/JSON `__source__` column is not used; it is empty in fetched data. The table shows `source` in a SOURCE column after EVT_ID.
+- Log line (inside the `FG_log_0` cell, whitespace-separated): `timestamp source eventId typeCode paramCount ...params`. The CSV/JSON `__source__` column is not used; it is empty in fetched data. The table shows `source` in a SOURCE column after EVT_ID, and a non-numeric filter term matches it too (e.g. `ble`).
 - Response shape: `{ sn: string, records: Array<{ time: string, eventId: number, source: string, message: string }> }`
 - Time format: `YYYY-MM-DD HH:mm:ss` UTC, derived from Unix epoch seconds × 1000
 - Dictionary CSV columns: `event_id, param_cnt, param_type, description` (quoted descriptions with embedded commas are handled)
