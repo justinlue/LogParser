@@ -3,3 +3,4 @@ node_modules/
 *.log
 WebConfig.json
 shortcuts.json
+__pycache__/

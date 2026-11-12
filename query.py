@@ -134,7 +134,7 @@ class WebLogsAliyun:
     def is_valid(self):
         return self._valid
 
-    def resolve_sn_from_vin(self, from_time, to_time, vin):
+    def resolve_sn_from_vin(self, from_time, to_time, vin, strict=False):
         if not self._valid:
             return None
         try:
@@ -142,12 +142,17 @@ class WebLogsAliyun:
                                           from_time=from_time,
                                           to_time=to_time,
                                           query=vin,
+                                          reverse=strict,
                                           size=1)
+            if strict and not lookup.is_completed():
+                raise RuntimeError('Incomplete Aliyun VIN lookup')
             for g in lookup.get_logs():
                 contents = getattr(g, 'contents', {}) or {}
                 if contents.get('__tag__:sn'):
                     return contents.get('__tag__:sn')
         except Exception:
+            if strict:
+                raise
             dbg('Aliyun VIN lookup failed:\n' + traceback.format_exc())
         return None
 
@@ -174,6 +179,49 @@ class WebLogsAliyun:
         except Exception:
             dbg('Aliyun query_logs failed:\n' + traceback.format_exc())
             return {'datas': [], 'count': 0, 'total_size': 0}
+
+
+    def status_window(self):
+        now = int(datetime.datetime.now().timestamp())
+        retention = int(self._client.get_logstore(self._project, self._logstore).get_ttl())
+        if retention == 3650:  # SLS sentinel for permanent retention
+            created = self._client.get_project(self._project).get_create_time()
+            start = to_epoch_local(created)
+            if start is None:
+                raise RuntimeError('Could not read Aliyun project creation time')
+        else:
+            start = max(0, now - (retention + 1) * 86400)
+        return start, now + 86400
+
+    def receive_times(self, from_time, to_time, sn):
+        # Project only cloud receive timestamps; never parse event payloads.
+        # SLS bounds filter indexed log time, which can differ from receive time.
+        # Search retained history and filter receive metadata explicitly instead.
+        sql = ('__tag__:sn: ' + sn +
+               ' | select "__tag__:__receive_time__" as t where '
+               'cast("__tag__:__receive_time__" as bigint) >= ' + str(from_time) +
+               ' and cast("__tag__:__receive_time__" as bigint) < ' + str(to_time) +
+               ' limit 1000000')
+        indexed_start, indexed_end = self.status_window()
+        times = []
+        while indexed_start < indexed_end:
+            # SLS can return incomplete SQL results over long indexed ranges.
+            # Disjoint 30-day windows keep each query small without losing
+            # receive-time matches near the selected month's boundaries.
+            stop = min(indexed_start + 30 * 86400, indexed_end)
+            result = self._client.get_log(self._project, self._logstore,
+                                          from_time=indexed_start, to_time=stop,
+                                          query=sql)
+            if not result.is_completed():
+                raise RuntimeError('Aliyun returned an incomplete status query; retry')
+            rows = list(result.get_logs())
+            if len(rows) >= 1000000:
+                raise RuntimeError('Too many logs for a complete monthly status query')
+            times.extend(receive_time_key({'__tag__:__receive_time__':
+                                          (getattr(r, 'contents', {}) or {}).get('t')})
+                         for r in rows)
+            indexed_start = stop
+        return times
 
 
 class WebLogsTencent:
@@ -247,7 +295,7 @@ class WebLogsTencent:
             log_datas.append(item)
         return log_datas
 
-    def _search(self, from_time, to_time, query, limit):
+    def _search(self, from_time, to_time, query, limit, strict=False):
         models = self._models
         req = models.SearchLogRequest()
         req.From = int(from_time) * 1000
@@ -260,6 +308,19 @@ class WebLogsTencent:
         req.Context = ''
 
         logs = []
+        if strict:
+            # Context pagination is capped at 10,000 records. Offset pagination
+            # allows a busy device's complete retained history to be searched.
+            req.Offset = 0
+            while True:
+                resp = self._client.SearchLog(req)
+                page = resp.Results or []
+                logs.extend(page)
+                if resp.ListOver:
+                    return logs
+                if not page:
+                    raise RuntimeError('Tencent returned an incomplete status search')
+                req.Offset += len(page)
         try:
             resp = self._client.SearchLog(req)
             logs.extend(resp.Results or [])
@@ -273,8 +334,18 @@ class WebLogsTencent:
             dbg('Tencent CLS search failed:\n' + traceback.format_exc())
         return logs
 
-    def resolve_sn_from_vin(self, from_time, to_time, vin):
+    def resolve_sn_from_vin(self, from_time, to_time, vin, strict=False):
         if not self._valid:
+            return None
+        if strict:
+            while to_time > from_time:
+                start = max(from_time, to_time - 86400)
+                logs = self._search(start, to_time, vin, 1000, strict=True)
+                datas = sorted(self._log_data_transform(logs), key=receive_time_key, reverse=True)
+                for data in datas:
+                    if data['__tag__:sn']:
+                        return data['__tag__:sn']
+                to_time = start
             return None
         logs = self._search(from_time, to_time, vin, 100)
         datas = sorted(self._log_data_transform(logs),
@@ -291,6 +362,45 @@ class WebLogsTencent:
         datas = self._log_data_transform(logs)
         total_size = sum(len(getattr(i, 'LogJson', '')) for i in logs)
         return {'datas': datas, 'count': len(datas), 'total_size': total_size}
+
+
+    def status_window(self):
+        request = self._models.DescribeTopicsRequest()
+        topic_filter = self._models.Filter()
+        topic_filter.Key = 'topicId'
+        topic_filter.Values = [self._topic_id]
+        request.Filters = [topic_filter]
+        topics = self._client.DescribeTopics(request).Topics or []
+        topic = next((t for t in topics if t.TopicId == self._topic_id), None)
+        if topic is None:
+            raise RuntimeError('Could not read Tencent topic retention')
+        now = int(datetime.datetime.now().timestamp())
+        tz8 = datetime.timezone(datetime.timedelta(hours=8))
+        created = int(datetime.datetime.fromisoformat(topic.CreateTime).replace(tzinfo=tz8).timestamp())
+        start = created if topic.Period == 3640 else max(created, now - (topic.Period + 1) * 86400)
+        return start, now + 86400
+
+    def receive_times(self, from_time, to_time, sn):
+        # Low-frequency CLS topics do not support SQL analysis. Read metadata
+        # from search results without decoding or formatting device events.
+        indexed_start, indexed_end = self.status_window()
+        logs = []
+        while indexed_start < indexed_end:
+            # Cold CLS searches time out on broad ranges with sparse matches.
+            stop = min(indexed_start + 86400, indexed_end)
+            logs.extend(self._search(indexed_start, stop, sn, 1000, strict=True))
+            indexed_start = stop
+        times = []
+        for log in logs:
+            raw = json.loads(log.LogJson)
+            if str(raw.get('SN', '')).upper() != sn.upper():
+                continue
+            timestamp = int((raw.get('__TAG__') or {}).get('receive_time', 0)) // 1000
+            if timestamp <= 0:
+                raise RuntimeError('Missing cloud receive timestamp')
+            if from_time <= timestamp < to_time:
+                times.append(timestamp)
+        return times
 
 
 def fallback_local(args, reason=''):
@@ -317,6 +427,8 @@ def main():
     parser.add_argument('--start', help='start date in YYYY-MM-DD')
     parser.add_argument('--end', help='end date in YYYY-MM-DD')
     parser.add_argument('--source', help='aliyun, tencent, or both (default both)')
+    parser.add_argument('--times-only', action='store_true',
+                        help='return cloud receive times only, without parsing or saving logs')
     args = parser.parse_args()
 
     if not args.sn and not args.vin:
@@ -356,13 +468,23 @@ def main():
         if not p.is_valid():
             dbg(f'{n} provider invalid: {getattr(p, "_error", "unknown error")}')
     if not valid_providers:
+        if args.times_only:
+            print(json.dumps({'error': 'No valid cloud provider configured'}))
+            return 2
         return fallback_local(args, 'no valid cloud provider configured')
+
+    if args.times_only and len(valid_providers) != len(providers):
+        print(json.dumps({'error': 'A selected cloud provider is unavailable; choose an available source'}))
+        return 2
 
     from_time, to_time = default_time_window()
     if args.start:
         from_time = to_epoch_local(args.start, end_of_day=False) or from_time
     if args.end:
         to_time = to_epoch_local(args.end, end_of_day=True) or to_time
+    if args.times_only:
+        # Status queries use an exclusive upper bound at next-day midnight.
+        to_time += 1
     dbg(f'Time window: from_time={from_time} to_time={to_time}')
 
     # With both given, the SN is the sole search criterion; the VIN is still
@@ -371,7 +493,13 @@ def main():
     vin_sn = None
     if args.vin:
         for name, p in valid_providers:
-            sn = p.resolve_sn_from_vin(from_time, to_time, args.vin)
+            try:
+                lookup_from, lookup_to = p.status_window() if args.times_only else (from_time, to_time)
+                sn = p.resolve_sn_from_vin(lookup_from, lookup_to, args.vin, strict=args.times_only)
+            except Exception:
+                dbg(traceback.format_exc())
+                print(json.dumps({'error': 'Cloud VIN lookup failed'}))
+                return 2
             if sn:
                 vin_sn = sn
                 dbg(f'Resolved VIN {args.vin} -> SN {vin_sn} via {name}')
@@ -381,6 +509,23 @@ def main():
         if not resolved_sn:
             dbg('VIN lookup returned no __tag__:sn on any provider')
             print(json.dumps({'error': f'could not resolve SN from VIN {args.vin}'}))
+            return 2
+
+    if args.times_only:
+        try:
+            if not re.fullmatch(r'[A-Za-z0-9]{15}', str(resolved_sn)):
+                raise RuntimeError('Invalid resolved device SN')
+            times = []
+            for name, provider in valid_providers:
+                times.extend(provider.receive_times(from_time, to_time, resolved_sn))
+            if any(t <= 0 for t in times):
+                raise RuntimeError('Cloud records are missing valid receive timestamps')
+            print(json.dumps({'sn': resolved_sn, 'vin_sn': vin_sn,
+                              'receive_times': sorted(times)}))
+            return 0
+        except Exception:
+            dbg(traceback.format_exc())
+            print(json.dumps({'error': 'Cloud status query failed; retry or select another source'}))
             return 2
 
     all_datas = []

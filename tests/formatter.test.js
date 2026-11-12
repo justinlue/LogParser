@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { formatRecord } from '../src/formatter.js';
+import { formatRecord, setTimezoneOffsetHours } from '../src/formatter.js';
+
+// These fixtures assert UTC independently of the application's +8 default.
+setTimezoneOffsetHours(0);
 
 const DICT = new Map([
   [2004, { paramCount: 1, paramType: 'INT32', description: 'Ble send pkt len: %d to mcu' }],

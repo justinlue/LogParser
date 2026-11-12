@@ -347,7 +347,7 @@ body.parsing .scan-line {
   cursor: default;
 }
 
-#queryBtn {
+#queryBtn, #onlineBtn {
   background: transparent;
   border: 1px solid var(--accent3);
   color: var(--accent3);
@@ -381,12 +381,12 @@ body.parsing .scan-line {
 
 #queryBtn:hover::before { left: 150%; }
 
-#queryBtn:hover {
+#queryBtn:hover, #onlineBtn:hover {
   background: rgba(0,200,255,.07);
   box-shadow: 0 0 30px rgba(0,200,255,.35), inset 0 0 20px rgba(0,200,255,.08);
 }
 
-#queryBtn:disabled {
+#queryBtn:disabled, #onlineBtn:disabled {
   opacity: .3;
   cursor: not-allowed;
   box-shadow: none;
@@ -1051,3 +1051,17 @@ tbody tr:hover td.col-num {
 }
 
 #resultsBody tr { cursor: pointer; }
+.online-calendar { overflow-x: auto; margin-top: 16px; }
+.online-calendar table { width: 100%; min-width: 630px; table-layout: fixed; border-collapse: collapse; }
+.online-calendar caption { text-align: left; padding: 8px 0; }
+.online-calendar td, .online-calendar th { border: 1px solid #345046; padding: 10px 6px; }
+.online-calendar td { height: 85px; vertical-align: top; }
+.online-calendar strong { display: block; font-size: 12px; }
+.online-calendar small { display: block; font-size: 11px; margin-top: 6px; white-space: pre-line; }
+.presence-online { background: #143c2c; color: #9af5bc; }
+.presence-offline { background: #35201e; color: #f3b5a5; }
+.presence-future { color: #929c98; background: #202826; }
+#onlineSummary { margin: 12px 0; }
+#onlineMonth { color-scheme: dark; padding: 8px; }
+.module[aria-label="Monthly online status"] .fetch-area { flex-wrap: wrap; align-items: center; }
+.online-calendar thead { position: static; }

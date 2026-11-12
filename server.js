@@ -7,7 +7,9 @@ import { saveConvertedCsv } from './src/downloads.js';
 import { openInChrome } from './src/browser.js';
 import { loadShortcutFile, saveShortcutFile } from './src/shortcutStore.js';
 import { buildQueryArgs, snVinMismatchWarning } from './src/remoteQuery.js';
-import { execFileSync, execSync } from 'child_process';
+import { execFile, execFileSync, execSync } from 'child_process';
+import { promisify } from 'node:util';
+import { dailyPresence, monthDateRange } from './src/onlineStatus.js';
 import fs from 'fs';
 
 // Detect the real Python interpreter path.
@@ -51,6 +53,38 @@ const upload = multer({
 });
 
 app.use(express.static('public'));
+
+const runPython = promisify(execFile);
+app.get('/api/online', async (req, res) => {
+  const { sn, vin, month, source = 'both' } = req.query;
+  let range;
+  try {
+    range = monthDateRange(month);
+    if ((!sn && !vin) || (sn && (typeof sn !== 'string' || !/^[A-Za-z0-9]{15}$/.test(sn))) ||
+        (vin && (typeof vin !== 'string' || !/^[A-Za-z0-9]{17}$/.test(vin)))) {
+      throw new Error('Enter a 15-character SN or a 17-character VIN');
+    }
+    if (!['both', 'aliyun', 'tencent'].includes(source)) throw new Error('Invalid cloud source');
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+  try {
+    const { stdout } = await runPython(PYTHON,
+      buildQueryArgs({ sn, vin, ...range, source, timesOnly: true }),
+      { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, timeout: 300000 });
+    const result = JSON.parse(stdout);
+    if (result.error || !Array.isArray(result.receive_times)) {
+      throw new Error(result.error || 'Invalid cloud status response');
+    }
+    res.json({ ...dailyPresence(result.receive_times, month), sn: result.sn || sn, source,
+      warning: snVinMismatchWarning({ sn, vin, vinSn: result.vin_sn }) });
+  } catch (err) {
+    let message = 'Cloud status query failed; retry or select another source';
+    try { message = JSON.parse(String(err.stdout)).error || message; } catch { /* no JSON */ }
+    console.error('Online status query failed:', err.message);
+    res.status(502).json({ error: message });
+  }
+});
 
 // New endpoint: fetch logs from Aliyun SLS and/or Tencent CLS via local query.py helper.
 // Query params: sn and/or vin (at least one; with both, sn is the search

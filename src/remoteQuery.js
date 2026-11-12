@@ -1,12 +1,13 @@
 // Command-line arguments for query.py. The SN is the search criterion whenever
 // it is given; a VIN passed alongside it is only checked against that SN.
-export function buildQueryArgs({ sn, vin, start, end, source }) {
+export function buildQueryArgs({ sn, vin, start, end, source, timesOnly }) {
   const args = ['query.py'];
   if (sn) args.push('--sn', sn);
   if (vin) args.push('--vin', vin);
   if (start) args.push('--start', start);
   if (end) args.push('--end', end);
   if (source) args.push('--source', source);
+  if (timesOnly) args.push('--times-only');
   return args;
 }
 

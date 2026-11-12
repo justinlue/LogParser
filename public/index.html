@@ -63,6 +63,18 @@
         </div>
       </section>
 
+      <section class="module" aria-label="Monthly online status">
+        <div class="module-label">▸ MONTHLY_ONLINE_STATUS</div>
+        <div class="fetch-area">
+          <input type="month" id="onlineMonth" aria-label="Online status month" required>
+          <button type="button" id="onlineBtn">CHECK STATUS</button>
+          <span>Uses SN / VIN and cloud source above · UTC+8</span>
+        </div>
+        <p>Online = at least one cloud log received that day. Offline = no logs found; this does not prove the device was disconnected.</p>
+        <p id="onlineSummary" role="status" aria-live="polite">Choose a month to check daily activity.</p>
+        <div id="onlineCalendar" class="online-calendar" hidden></div>
+      </section>
+
       <section class="module" id="uploadModule" hidden>
         <div class="module-label">▸ INPUT_STREAM</div>
         <div class="upload-area">
@@ -144,5 +156,6 @@
   </div>
 
   <script type="module" src="app.js"></script>
+  <script type="module" src="online.js"></script>
 </body>
 </html>
