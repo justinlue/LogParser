@@ -1061,7 +1061,30 @@ tbody tr:hover td.col-num {
 .presence-online { background: #143c2c; color: #9af5bc; }
 .presence-offline { background: #35201e; color: #f3b5a5; }
 .presence-future { color: #929c98; background: #202826; }
-#onlineSummary { margin: 12px 0; }
+.online-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 12px 0;
+}
+#onlineSummary { flex: 1; margin: 0; }
+#onlineHideBtn {
+  background: transparent;
+  border: 1px solid var(--accent-d);
+  color: var(--text);
+  padding: 5px 14px;
+  font-family: var(--font-m);
+  font-size: 11px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .2s, color .2s, box-shadow .2s;
+}
+#onlineHideBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 14px rgba(0,255,159,.15);
+}
 #onlineMonth { color-scheme: dark; padding: 8px; }
 .module[aria-label="Monthly online status"] .fetch-area { flex-wrap: wrap; align-items: center; }
 .online-calendar thead { position: static; }

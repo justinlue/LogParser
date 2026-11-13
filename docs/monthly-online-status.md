@@ -11,6 +11,13 @@ Future days are marked upcoming and excluded from the elapsed-day total.
 Today is included but may be incomplete. Counts from BOTH combine both
 providers and can include duplicate uploads.
 
+The calendar describes the device it was drawn for. HIDE collapses it and
+leaves the summary; SHOW brings it back, so a result that took minutes to
+fetch is not lost. The whole result is cleared once logs of a different SN are
+loaded (by FETCH or a local file), and a status result that arrives after the
+user has moved to another device's logs is shown as its summary only.
+Re-loading the same SN keeps the result.
+
 `GET /api/online?sn=<15-character-SN>&month=YYYY-MM&source=both`
 also accepts `vin=<17-character-VIN>`. With both identifiers, the SN is searched
 and a VIN mismatch is reported as a warning. VIN-only lookup must find an SN

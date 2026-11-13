@@ -71,7 +71,10 @@
           <span>Uses SN / VIN and cloud source above · UTC+8</span>
         </div>
         <p>Online = at least one cloud log received that day. Offline = no logs found; this does not prove the device was disconnected.</p>
-        <p id="onlineSummary" role="status" aria-live="polite">Choose a month to check daily activity.</p>
+        <div class="online-summary-row">
+          <p id="onlineSummary" role="status" aria-live="polite">Choose a month to check daily activity.</p>
+          <button type="button" id="onlineHideBtn" title="Hide the online status calendar" aria-label="Hide the online status calendar" hidden>HIDE</button>
+        </div>
         <div id="onlineCalendar" class="online-calendar" hidden></div>
       </section>
 

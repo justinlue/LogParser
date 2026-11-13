@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { dailyPresence, monthDateRange } from '../src/onlineStatus.js';
-import { calendarWeeks } from '../public/calendar.js';
+import { calendarIsStale, calendarWeeks } from '../public/calendar.js';
 import { buildQueryArgs } from '../src/remoteQuery.js';
 
 const epoch = s => Date.parse(s) / 1000;
@@ -37,6 +37,20 @@ test('calendar weeks are Monday first with leading and trailing blank cells', ()
   assert.deepEqual(weeks[4], [26, 27, 28, 29, 30, 31, null]);
   assert.equal(calendarWeeks('2027-02').length, 4);
 });
+test('a calendar is stale once another SN is on screen, and only then', () => {
+  // Same device, including the case-insensitive SN comparison used elsewhere.
+  assert.equal(calendarIsStale('NSBB22100D59F7B', 'NSBB22100D59F7B'), false);
+  assert.equal(calendarIsStale('NSBB22100D59F7B', 'nsbb22100d59f7b'), false);
+  // Logs of another device replace the ones the calendar was shown beside.
+  assert.equal(calendarIsStale('NSBB22100D59F7B', 'NSBB22100D59F7C'), true);
+  // No calendar, or no SN reported for the loaded logs: nothing to clear.
+  assert.equal(calendarIsStale(null, 'NSBB22100D59F7B'), false);
+  assert.equal(calendarIsStale('', 'NSBB22100D59F7B'), false);
+  assert.equal(calendarIsStale('NSBB22100D59F7B', null), false);
+  assert.equal(calendarIsStale('NSBB22100D59F7B', undefined), false);
+  assert.equal(calendarIsStale('NSBB22100D59F7B', ''), false);
+});
+
 test('online query requests only cloud receive times', () => {
   assert.deepEqual(buildQueryArgs({ sn: 'NSBB22100D59F7B', timesOnly: true }),
     ['query.py', '--sn', 'NSBB22100D59F7B', '--times-only']);

@@ -1,5 +1,6 @@
 import { createShortcuts, shortcutLabel, slotForKey, STORAGE_KEY as SHORTCUTS_KEY } from './shortcuts.js';
 import { formatLineNum, markEntries } from './marks.js';
+import { announceRecordsLoaded } from './events.js';
 
 const fileInput  = document.getElementById('fileInput');
 const parseBtn   = document.getElementById('parseBtn');
@@ -192,6 +193,7 @@ queryBtn.addEventListener('click', async () => {
     search.disabled = false;
     clearMarks();
     render(allRecords);
+    announceRecordsLoaded(json.sn || sn);
     if (json.warning) showError(json.warning);
     else              clearError();
     if (sn) history.add(HIST_SN, sn);
@@ -235,6 +237,7 @@ parseBtn.addEventListener('click', async () => {
     search.disabled = false;
     clearMarks();
     render(allRecords);
+    announceRecordsLoaded(json.sn);
     clearError();
   } catch (err) {
     showError(err.message);
